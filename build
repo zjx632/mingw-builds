@@ -311,7 +311,7 @@ MARKERS_DIR=$SRCS_DIR/MARKERS
 PREREQ_DIR=$ROOT_DIR/mingw-prereq
 RUNTIME_DIR=$ROOT_DIR/mingw-runtime
 ARCHIVES_DIR=$ROOT_DIR/mingw-archives
-mkdir -p $SRCS_DIR $MARKERS_DIR $ARCHIVES_DIR $PREREQ_DIR $RUNTIME_DIR
+mkdir -p $SRCS_DIR $UNPACK_DIR $MARKERS_DIR $ARCHIVES_DIR $PREREQ_DIR $RUNTIME_DIR
 
 # **************************************************************************
 
