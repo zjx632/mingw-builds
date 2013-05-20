@@ -70,8 +70,8 @@
 	
 	for it in ${SUBTARGETS[@]}; do
 		[[ $it == put-info ]] && continue
-		[[ -z $(grep 'CONFIGURE_FLAGS=' $TOP_DIR/scripts/$it.sh) ]] && continue
-		. $TOP_DIR/scripts/$it.sh
+		[[ -z $(grep 'CONFIGURE_FLAGS=' $PORTS_DIR/$it.sh) ]] && continue
+		. $PORTS_DIR/$it.sh
 		echo "$NAME configuration:" >> $INFO_FILE
 		echo "${CONFIGURE_FLAGS[@]}" >> $INFO_FILE
 		echo >> $INFO_FILE

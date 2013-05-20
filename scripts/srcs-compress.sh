@@ -39,7 +39,7 @@ ARCHIVE_NAME=\
 $( \
 	func_create_sources_archive_name \
 		$ARCHIVES_DIR \
-		$SRCS_DIR \
+		$UNPACK_DIR \
 		$GCC_NAME \
 		$REV_NUM \
 )
@@ -51,11 +51,11 @@ $( \
 
 	LIST_OF_DIRS_FOR_COMPRESS=( \
 		$( \
-			cd $ROOT_DIR && find $(basename $SRCS_DIR) \
+			cd $ROOT_DIR && find $(basename $UNPACK_DIR) \
 			-maxdepth 1 -type d -not -name gcc-* \
 		) \
 	)
-	LIST_OF_DIRS_FOR_COMPRESS[0]=$(basename $SRCS_DIR)/$GCC_NAME
+	LIST_OF_DIRS_FOR_COMPRESS[0]=$(basename $UNPACK_DIR)/$GCC_NAME
 
 	tar -cf - -C$ROOT_DIR \
 		--dereference --hard-dereference --exclude-vcs \

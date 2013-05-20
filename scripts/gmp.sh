@@ -35,48 +35,79 @@
 
 # **************************************************************************
 
-VERSION=5.1.1
-NAME=$ARCHITECTURE-gmp-${VERSION}-$LINK_TYPE_SUFFIX
-SRC_DIR_NAME=gmp-${VERSION}
-URL=ftp://ftp.gmplib.org/pub/gmp-${VERSION}/gmp-${VERSION}.tar.bz2
-TYPE=.tar.bz2
+P=gmp
+V=5.1.1
+TYPE=".tar.bz2"
+P_V=${P}-${V}
+SRC_FILE="${P_V}${TYPE}"
+B=$ARCHITECTURE-${P_V}-$LINK_TYPE_SUFFIX
+URL=ftp://ftp.gmplib.org/pub/${P_V}/${SRC_FILE}
 PRIORITY=prereq
 
-#
+src_download() {
+	func_download ${P_V} ${TYPE} ${URL}
+}
 
-PATCHES=()
+src_unpack() {
+	func_uncompress ${P_V} ${TYPE}
+}
 
-#
+src_patch() {
+	local _patches=(
+	)
+	
+	func_apply_patches \
+		${P_V} \
+		_patches[@]
+}
 
-CONFIGURE_FLAGS=(
-	--host=$HOST
-	--build=$BUILD
-	--target=$TARGET
-	#
-	--prefix=$PREREQ_DIR/$HOST-$LINK_TYPE_SUFFIX
-	#
-	$GCC_DEPS_LINK_TYPE
-	#
-	--enable-cxx
-	#
-	CFLAGS="\"$COMMON_CFLAGS\""
-	CXXFLAGS="\"$COMMON_CXXFLAGS\""
-	CPPFLAGS="\"$COMMON_CPPFLAGS\""
-	LDFLAGS="\"$COMMON_LDFLAGS\""
-)
+src_configure() {
+	local _conf_flags=(
+		--host=$HOST
+		--build=$BUILD
+		--target=$TARGET
+		#
+		--prefix=$PREREQ_DIR/$HOST-$LINK_TYPE_SUFFIX
+		#
+		$GCC_DEPS_LINK_TYPE
+		#
+		--enable-cxx
+		#
+		CFLAGS="\"$COMMON_CFLAGS\""
+		CXXFLAGS="\"$COMMON_CXXFLAGS\""
+		CPPFLAGS="\"$COMMON_CPPFLAGS\""
+		LDFLAGS="\"$COMMON_LDFLAGS\""
+	)
+	local _allconf="${_conf_flags[@]}"
+	func_configure ${B} ${P_V} "$_allconf"
+}
 
-#
+pkg_build() {
+	local _make_flags=(
+		-j${JOBS}
+		all
+	)
+	local _allmake="${_make_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allmake" \
+		"building..." \
+		"built"
+}
 
-MAKE_FLAGS=(
-	-j$JOBS
-	all
-)
-
-#
-
-INSTALL_FLAGS=(
-	-j$JOBS
-	$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
-)
+pkg_install() {
+	local _install_flags=(
+		-j${JOBS}
+		$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
+	)
+	local _allinstall="${_install_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allinstall" \
+		"installing..." \
+		"installed"
+}
 
 # **************************************************************************

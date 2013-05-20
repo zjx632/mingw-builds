@@ -35,21 +35,13 @@
 
 # **************************************************************************
 
-# Program name
 P=program
-# Program version
 V=version
-# Source archive extension or repository type (cvs, svn, git)
 TYPE=".tar.gz"
-# Program with version
 P_V=${P}-${V}
-# Source filename
 SRC_FILE="${P_V}${TYPE}"
-# Build directory name
 B=${P_V}
-# Download link
 URL=http://ftp.gnu.org/pub/gnu/${P}/${SRC_FILE}
-#
 PRIORITY={main, extra, prereq, runtime}
 
 src_download() {
@@ -105,7 +97,7 @@ pkg_build() {
 pkg_install() {
 	local _install_flags=(
 		-j${JOBS}
-		install
+		$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
 	)
 	local _allinstall="${_install_flags[@]}"
 	func_make \

@@ -425,37 +425,27 @@ mkdir -p $SRCS_DIR $MARKERS_DIR $ARCHIVES_DIR $PREREQ_DIR $RUNTIME_DIR
 # **************************************************************************
 
 LIBICONV_X32_SUBTARGETS=(
-	libiconv-x32-pre
 	libiconv-x32
-	libiconv-x32-post
 )
 
 LIBICONV_X64_SUBTARGETS=(
-	libiconv-x64-pre
 	libiconv-x64
-	libiconv-x64-post
 )
 
 WINPTHREADS_X32_SUBTARGETS=(
-	winpthreads-x32-pre
 	winpthreads-x32
-	winpthreads-x32-post
 )
 
 WINPTHREADS_X64_SUBTARGETS=(
-	winpthreads-x64-pre
 	winpthreads-x64
-	winpthreads-x64-post
 )
 
 ZLIB_X32_SUBTARGETS=(
-	zlib
-	zlib-x32-post
+	zlib-x32
 )
 
 ZLIB_X64_SUBTARGETS=(
-	zlib
-	zlib-x64-post
+	zlib-x64
 )
 
 SUBTARGETS_PART1=(
@@ -486,7 +476,6 @@ PYTHON_SUBTARGETS=(
 SUBTARGETS_PART2=(
 	mingw-w64-runtime-post
 	binutils
-	binutils-post
 	$GCC_NAME
 	gcc-post
 	mingw-w64-libraries-libmangle
@@ -587,9 +576,10 @@ SUBTARGETS_PART2=(
 				die "script for subtarget \"$sub\" is not exists. terminate."
 			}
 
+			URL=
 			source $PORTS_DIR/$sub.sh
 
-			[[ -z $B ]] && continue
+			[[ -z $URL ]] && continue
 
 			#mkdir -p $SRCS_DIR/$SRC_DIR_NAME
 
@@ -741,6 +731,7 @@ for ARCHITECTURE in ${BUILD_ARCHITECTURES[@]}; do
 			die "script for subtarget \"$sub\" is not exists. terminate."
 		}
 
+		URL=
 		source $PORTS_DIR/$sub.sh
 	
 		[[ $sub == "gcc-post" ]] && {
@@ -749,7 +740,7 @@ for ARCHITECTURE in ${BUILD_ARCHITECTURES[@]}; do
 			echo "done"
 		}
 
-		[[ -z $B ]] && continue
+		[[ -z $URL ]] && continue
 
 		case $PRIORITY in
 			prereq | runtime)

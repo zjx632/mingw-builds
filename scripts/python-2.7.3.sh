@@ -35,117 +35,148 @@
 
 # **************************************************************************
 
-VERSION=2.7.3
-NAME=Python-${VERSION}
-SRC_DIR_NAME=Python-${VERSION}
-URL=http://www.python.org/ftp/python/${VERSION}/Python-${VERSION}.tar.bz2
-TYPE=.tar.bz2
+P=Python
+V=2.7.3
+TYPE=".tar.bz2"
+P_V=${P}-${V}
+SRC_FILE="${P_V}${TYPE}"
+B=${P_V}
+URL=http://www.python.org/ftp/python/${V}/${SRC_FILE}
 PRIORITY=extra
 
-#
-
-PATCHES=(
-	Python/${VERSION}/0000-CROSS.patch
-	Python/${VERSION}/0005-MINGW.patch
-	Python/${VERSION}/0006-mingw-removal-of-libffi-patch.patch
-	Python/${VERSION}/0007-mingw-system-libffi.patch	
-	Python/${VERSION}/0010-mingw-use-posix-getpath.patch
-	Python/${VERSION}/0015-cross-darwin.patch
-	Python/${VERSION}/0020-mingw-sysconfig-like-posix.patch
-	Python/${VERSION}/0025-mingw-pdcurses_ISPAD.patch
-	Python/${VERSION}/0030-mingw-static-tcltk.patch
-	Python/${VERSION}/0035-mingw-x86_64-size_t-format-specifier-pid_t.patch
-	Python/${VERSION}/0040-python-disable-dbm.patch
-	Python/${VERSION}/0045-disable-grammar-dependency-on-pgen-executable.patch
-	Python/${VERSION}/0050-add-python-config-sh.patch
-	Python/${VERSION}/0055-mingw-nt-threads-vs-pthreads.patch
-	Python/${VERSION}/0060-cross-dont-add-multiarch-paths-if.patch
-	Python/${VERSION}/0065-mingw-reorder-bininstall-ln-symlink-creation.patch
-	Python/${VERSION}/0070-mingw-use-backslashes-in-compileall-py.patch
-	Python/${VERSION}/0075-mingw-distutils-MSYS-convert_path-fix-and-root-hack.patch
-	Python/${VERSION}/0100-upgrade-internal-libffi-to-3.0.11.patch
-	Python/${VERSION}/0105-mingw-MSYS-no-usr-lib-or-usr-include.patch
-	Python/${VERSION}/9999-re-configure-d.patch
-)
-
-#
-
-EXECUTE_AFTER_PATCH=(
-	"rm -rf Modules/expat"
-	"rm -rf Modules/_ctypes/libffi*"
-	"rm -rf Modules/zlib"
-	"autoconf"
-	"autoheader"
-	"rm -rf autom4te.cache"
-	"touch Include/graminit.h"
-	"touch Python/graminit.c"
-	"touch Parser/Python.asdl"
-	"touch Parser/asdl.py"
-	"touch Parser/asdl_c.py"
-	"touch Include/Python-ast.h"
-	"touch Python/Python-ast.c"
-	"echo \"\" > Parser/pgen.stamp"
-)
-
-#
-
-[[ -d $LIBS_DIR ]] && {
-	pushd $LIBS_DIR > /dev/null
-	LIBSW_DIR=`pwd -W`
-	popd > /dev/null
+src_download() {
+	func_download ${P_V} ${TYPE} ${URL}
 }
 
-[[ -d $PREFIX ]] && {
-	pushd $PREFIX > /dev/null
-	PREFIXW=`pwd -W`
-	popd > /dev/null
+src_unpack() {
+	func_uncompress ${P_V} ${TYPE}
 }
 
-[[ -d $PREREQ_DIR ]] && {
-	pushd $PREREQ_DIR > /dev/null
-	PREREQW_DIR=`pwd -W`
-	popd > /dev/null
+src_patch() {
+	local _patches=(
+		${P}/${V}/0000-CROSS.patch
+		${P}/${V}/0005-MINGW.patch
+		${P}/${V}/0006-mingw-removal-of-libffi-patch.patch
+		${P}/${V}/0007-mingw-system-libffi.patch	
+		${P}/${V}/0010-mingw-use-posix-getpath.patch
+		${P}/${V}/0015-cross-darwin.patch
+		${P}/${V}/0020-mingw-sysconfig-like-posix.patch
+		${P}/${V}/0025-mingw-pdcurses_ISPAD.patch
+		${P}/${V}/0030-mingw-static-tcltk.patch
+		${P}/${V}/0035-mingw-x86_64-size_t-format-specifier-pid_t.patch
+		${P}/${V}/0040-python-disable-dbm.patch
+		${P}/${V}/0045-disable-grammar-dependency-on-pgen-executable.patch
+		${P}/${V}/0050-add-python-config-sh.patch
+		${P}/${V}/0055-mingw-nt-threads-vs-pthreads.patch
+		${P}/${V}/0060-cross-dont-add-multiarch-paths-if.patch
+		${P}/${V}/0065-mingw-reorder-bininstall-ln-symlink-creation.patch
+		${P}/${V}/0070-mingw-use-backslashes-in-compileall-py.patch
+		${P}/${V}/0075-mingw-distutils-MSYS-convert_path-fix-and-root-hack.patch
+		${P}/${V}/0100-upgrade-internal-libffi-to-3.0.11.patch
+		${P}/${V}/0105-mingw-MSYS-no-usr-lib-or-usr-include.patch
+		${P}/${V}/9999-re-configure-d.patch
+	)
+	
+	func_apply_patches \
+		${P_V} \
+		_patches[@]
+
+	local _commands=(
+		"rm -rf Modules/expat"
+		"rm -rf Modules/_ctypes/libffi*"
+		"rm -rf Modules/zlib"
+		"autoconf"
+		"autoheader"
+		"rm -rf autom4te.cache"
+		"touch Include/graminit.h"
+		"touch Python/graminit.c"
+		"touch Parser/Python.asdl"
+		"touch Parser/asdl.py"
+		"touch Parser/asdl_c.py"
+		"touch Include/Python-ast.h"
+		"touch Python/Python-ast.c"
+		"echo \"\" > Parser/pgen.stamp"
+	)
+	local _allcommands="${_commands[@]}"
+	func_execute ${UNPACK_DIR}/${P_V} "Python-preconfigure" "$_allcommands"
 }
 
-LIBFFI_VERSION=$( grep 'VERSION=' $TOP_DIR/scripts/libffi.sh | sed 's|VERSION=||' )
-MY_CPPFLAGS="-I$LIBSW_DIR/include -I$LIBSW_DIR/include/ncurses -I$PREREQW_DIR/$ARCHITECTURE-zlib/include -I$PREFIXW/opt/include"
+src_configure() {
+	[[ -d $LIBS_DIR ]] && {
+		pushd $LIBS_DIR > /dev/null
+		local LIBSW_DIR=`pwd -W`
+		popd > /dev/null
+	}
 
-# Workaround for conftest error on 64-bit builds
-export ac_cv_working_tzset=no
-#
+	[[ -d $PREFIX ]] && {
+		pushd $PREFIX > /dev/null
+		local PREFIXW=`pwd -W`
+		popd > /dev/null
+	}
 
-CONFIGURE_FLAGS=(
-	--host=$HOST
-	--build=$BUILD
+	[[ -d $PREREQ_DIR ]] && {
+		pushd $PREREQ_DIR > /dev/null
+		local PREREQW_DIR=`pwd -W`
+		popd > /dev/null
+	}
+
+	local LIBFFI_VERSION=$( grep 'V=' $PORTS_DIR/libffi.sh | sed 's|V=||' )
+	local MY_CPPFLAGS="-I$LIBSW_DIR/include -I$LIBSW_DIR/include/ncurses -I$PREREQW_DIR/$ARCHITECTURE-zlib/include -I$PREFIXW/opt/include"
+
+	# Workaround for conftest error on 64-bit builds
+	export ac_cv_working_tzset=no
 	#
-	--prefix=$([[ $PYTHON_ONLY_MODE == no ]] && echo $PREFIX/opt || echo $PREFIX)
-	#
-	--enable-shared
-	--disable-ipv6
-	--without-pydebug
-	--with-system-expat
-	--with-system-ffi
-	#
-	CXX="$HOST-g++"
-	LIBFFI_INCLUDEDIR="$LIBSW_DIR/lib/libffi-$LIBFFI_VERSION/include"
-	OPT=""
-	CFLAGS="\"$COMMON_CFLAGS -fwrapv -DNDEBUG -D__USE_MINGW_ANSI_STDIO=1\""
-	CXXFLAGS="\"$COMMON_CXXFLAGS -fwrapv -DNDEBUG -D__USE_MINGW_ANSI_STDIO=1 $MY_CPPFLAGS\""
-	CPPFLAGS="\"$COMMON_CPPFLAGS $MY_CPPFLAGS\""
-	LDFLAGS="\"$COMMON_LDFLAGS -L$PREREQW_DIR/$ARCHITECTURE-zlib/lib -L$PREFIXW/opt/lib -L$LIBSW_DIR/lib\""
-)
 
-#
+	local _conf_flags=(
+		--host=$HOST
+		--build=$BUILD
+		#
+		--prefix=$([[ $PYTHON_ONLY_MODE == no ]] && echo $PREFIX/opt || echo $PREFIX)
+		#
+		--enable-shared
+		--disable-ipv6
+		--without-pydebug
+		--with-system-expat
+		--with-system-ffi
+		#
+		CXX="$HOST-g++"
+		LIBFFI_INCLUDEDIR="$LIBSW_DIR/lib/libffi-$LIBFFI_VERSION/include"
+		OPT=""
+		CFLAGS="\"$COMMON_CFLAGS -fwrapv -DNDEBUG -D__USE_MINGW_ANSI_STDIO=1\""
+		CXXFLAGS="\"$COMMON_CXXFLAGS -fwrapv -DNDEBUG -D__USE_MINGW_ANSI_STDIO=1 $MY_CPPFLAGS\""
+		CPPFLAGS="\"$COMMON_CPPFLAGS $MY_CPPFLAGS\""
+		LDFLAGS="\"$COMMON_LDFLAGS -L$PREREQW_DIR/$ARCHITECTURE-zlib/lib -L$PREFIXW/opt/lib -L$LIBSW_DIR/lib\""
+	)
+	local _allconf="${_conf_flags[@]}"
+	func_configure ${B} ${P_V} "$_allconf"
+}
 
-MAKE_FLAGS=(
-	-j$JOBS
-	all
-)
+pkg_build() {
+	local _make_flags=(
+		-j${JOBS}
+		all
+	)
+	local _allmake="${_make_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allmake" \
+		"building..." \
+		"built"
+}
 
-#
-
-INSTALL_FLAGS=(
-	install
-)
+pkg_install() {
+	local _install_flags=(
+		-j${JOBS}
+		install
+	)
+	local _allinstall="${_install_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allinstall" \
+		"installing..." \
+		"installed"
+}
 
 # **************************************************************************

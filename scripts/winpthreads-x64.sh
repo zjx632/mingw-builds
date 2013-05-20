@@ -35,46 +35,122 @@
 
 # **************************************************************************
 
-NAME=winpthreads-x64
-SRC_DIR_NAME=winpthreads
-URL=http://mingw-w64.svn.sourceforge.net/svnroot/mingw-w64/trunk/mingw-w64-libraries/winpthreads
-TYPE=svn
-REV=
+P=winpthreads
+V=
+TYPE="svn"
+P_V=${P}
+SRC_FILE=
+B=${P_V}-x64
+URL=http://mingw-w64.svn.sourceforge.net/svnroot/mingw-w64/trunk/mingw-w64-libraries/${P}
 PRIORITY=runtime
+REV=
 
-#
+change_paths() {
+	[[ $ARCHITECTURE == x32 ]] && {
+		BEFORE_WINPTHREADS64_PRE_PATH=$PATH
+		export PATH=$x64_HOST_MINGW_PATH/bin:$ORIGINAL_PATH
 
-PATCHES=()
+		[[ $USE_MULTILIB == yes ]] && {
+			OLD_HOST=$HOST
+			OLD_BUILD=$BUILD
+			OLD_TARGET=$TARGET
+			HOST=$TVIN_HOST
+			BUILD=$TVIN_BUILD
+			TARGET=$TVIN_TARGET
+		}
+	}
+}
 
-#
+restore_paths() {
+	[[ $ARCHITECTURE == x32 ]] && {
+		export PATH=$BEFORE_WINPTHREADS64_PRE_PATH
 
-CONFIGURE_FLAGS=(
-	--host=$HOST
-	--build=$BUILD
-	--target=$TARGET
-	#
-	--prefix=$RUNTIME_DIR/winpthreads-x64
-	#
-	$LINK_TYPE_BOTH
-	#
-	CFLAGS="\"$COMMON_CFLAGS\""
-	CXXFLAGS="\"$COMMON_CXXFLAGS\""
-	CPPFLAGS="\"$COMMON_CPPFLAGS\""
-	LDFLAGS="\"$COMMON_LDFLAGS\""
-)
+		[[ $USE_MULTILIB == yes ]] && {
+			HOST=$OLD_HOST
+			BUILD=$OLD_BUILD
+			TARGET=$OLD_TARGET
+		}
+		unset BEFORE_WINPTHREADS64_PRE_PATH
+		unset OLD_HOST
+		unset OLD_BUILD
+		unset OLD_TARGET
+	}
+}
 
-#
+src_download() {
+	func_download ${P_V} ${TYPE} ${URL}
+}
 
-MAKE_FLAGS=(
-	-j$JOBS
-	all
-)
+src_unpack() {
+	echo "--> Don't need to unpack"
+}
 
-#
+src_patch() {
+	local _patches=(
+	)
+	
+	func_apply_patches \
+		${P_V} \
+		_patches[@]
+}
 
-INSTALL_FLAGS=(
-	-j$JOBS
-	$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
-)
+src_configure() {
+	change_paths
+
+	local _conf_flags=(
+		--host=$HOST
+		--build=$BUILD
+		--target=$TARGET
+		#
+		--prefix=$RUNTIME_DIR/${P}-x64
+		#
+		$LINK_TYPE_BOTH
+		#
+		CFLAGS="\"$COMMON_CFLAGS\""
+		CXXFLAGS="\"$COMMON_CXXFLAGS\""
+		CPPFLAGS="\"$COMMON_CPPFLAGS\""
+		LDFLAGS="\"$COMMON_LDFLAGS\""
+	)
+	local _allconf="${_conf_flags[@]}"
+	func_configure ${B} ${P_V} "$_allconf"
+
+	restore_paths
+}
+
+pkg_build() {
+	change_paths
+
+	local _make_flags=(
+		-j${JOBS}
+		all
+	)
+	local _allmake="${_make_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allmake" \
+		"building..." \
+		"built"
+
+	restore_paths
+}
+
+pkg_install() {
+	change_paths
+
+	local _install_flags=(
+		-j${JOBS}
+		$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
+	)
+	local _allinstall="${_install_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allinstall" \
+		"installing..." \
+		"installed"
+
+	restore_paths
+}
 
 # **************************************************************************

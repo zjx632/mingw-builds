@@ -42,44 +42,82 @@ URL=http://prdownloads.sourceforge.net/tcl/tk${VERSION}-src.tar.gz
 TYPE=.tar.gz
 PRIORITY=extra
 
-#
+P=tk
+V=8.6.0
+TYPE=".tar.gz"
+P_V=${P}${V}
+SRC_FILE="${P_V}-src${TYPE}"
+B=${P_V}
+URL=http://prdownloads.sourceforge.net/tcl/${SRC_FILE}
+PRIORITY={main, extra, prereq, runtime}
 
-PATCHES=()
+src_download() {
+	func_download ${P_V} ${TYPE} ${URL}
+}
 
-#
+src_unpack() {
+	func_uncompress ${P_V} ${TYPE}
+}
 
-CONFIGURE_FLAGS=(
-	--host=$HOST
-	--build=$BUILD
-	--target=$TARGET
-	#
-	--prefix=$PREFIX/opt
-	--with-tcl=$PREFIX/opt/lib
-	#
-	--enable-shared
-	#
-	$( [[ $ARCHITECTURE == x64 ]] \
-		&& echo "--enable-64bit"
+src_patch() {
+	local _patches=(
+	)
+	
+	func_apply_patches \
+		${P_V} \
+		_patches[@]
+}
+
+src_configure() {
+	local _conf_flags=(
+		--host=$HOST
+		--build=$BUILD
+		--target=$TARGET
+		#
+		--prefix=$PREFIX/opt
+		--with-tcl=$PREFIX/opt/lib
+		#
+		--enable-shared
+		#
+		$( [[ $ARCHITECTURE == x64 ]] \
+			&& echo "--enable-64bit"
 	)
 	#
 	CFLAGS="\"$COMMON_CFLAGS\""
 	CXXFLAGS="\"$COMMON_CXXFLAGS\""
 	CPPFLAGS="\"$COMMON_CPPFLAGS\""
 	LDFLAGS="\"$COMMON_LDFLAGS\""
-)
+	)
+	local _allconf="${_conf_flags[@]}"
+	func_configure ${B} ${P_V}/win "$_allconf"
+}
 
-#
+pkg_build() {
+	local _make_flags=(
+		-j${JOBS}
+		all
+	)
+	local _allmake="${_make_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allmake" \
+		"building..." \
+		"built"
+}
 
-MAKE_FLAGS=(
-	-j$JOBS
-	all
-)
-
-#
-
-INSTALL_FLAGS=(
-	-j$JOBS
-	install
-)
+pkg_install() {
+	local _install_flags=(
+		-j${JOBS}
+		$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
+	)
+	local _allinstall="${_install_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allinstall" \
+		"installing..." \
+		"installed"
+}
 
 # **************************************************************************

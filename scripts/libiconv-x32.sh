@@ -35,46 +35,117 @@
 
 # **************************************************************************
 
-VERSION=1.14
-NAME=libiconv-x32-$LINK_TYPE_SUFFIX
-SRC_DIR_NAME=libiconv-${VERSION}
-URL=http://ftp.gnu.org/pub/gnu/libiconv/libiconv-${VERSION}.tar.gz
-TYPE=.tar.gz
+P=libiconv
+V=1.14
+TYPE=".tar.gz"
+P_V=${P}-${V}
+SRC_FILE="${P_V}${TYPE}"
+B=${P_V}-x32-$LINK_TYPE_SUFFIX
+URL=http://ftp.gnu.org/pub/gnu/${P}/${SRC_FILE}
 PRIORITY=prereq
 
-#
+change_paths() {
+	[[ $ARCHITECTURE == x64 ]] && {
+		BEFORE_LIBICONV32_PRE_PATH=$PATH
+		export PATH=$x32_HOST_MINGW_PATH/bin:$ORIGINAL_PATH
+	
+		[[ $USE_MULTILIB == yes ]] && {
+			OLD_HOST=$HOST
+			OLD_BUILD=$BUILD
+			OLD_TARGET=$TARGET
+			HOST=$TVIN_HOST
+			BUILD=$TVIN_BUILD
+			TARGET=$TVIN_TARGET
+		}
+	}
+}
 
-PATCHES=()
+restore_paths() {
+	[[ $ARCHITECTURE == x64 ]] && {
+		export PATH=$BEFORE_LIBICONV32_PRE_PATH
+	
+		[[ $USE_MULTILIB == yes ]] && {
+			HOST=$OLD_HOST
+			BUILD=$OLD_BUILD
+			TARGET=$OLD_TARGET
+		}
+	}
+}
 
-#
+src_download() {
+	func_download ${P_V} ${TYPE} ${URL}
+}
 
-CONFIGURE_FLAGS=(
-	--host=$HOST
-	--build=$BUILD
-	--target=$TARGET
-	#
-	--prefix=$PREREQ_DIR/libiconv-x32-$LINK_TYPE_SUFFIX
-	#
-	$GCC_DEPS_LINK_TYPE
-	#
-	CFLAGS="\"$COMMON_CFLAGS\""
-	CXXFLAGS="\"$COMMON_CXXFLAGS\""
-	CPPFLAGS="\"$COMMON_CPPFLAGS\""
-	LDFLAGS="\"$COMMON_LDFLAGS\""
-)
+src_unpack() {
+	func_uncompress ${P_V} ${TYPE}
+}
 
-#
+src_patch() {
+	local _patches=(
+	)
+	
+	func_apply_patches \
+		${P_V} \
+		_patches[@]
+}
 
-MAKE_FLAGS=(
-	-j$JOBS
-	all
-)
+src_configure() {
+	change_paths
 
-#
+	local _conf_flags=(
+		--host=$HOST
+		--build=$BUILD
+		--target=$TARGET
+		#
+		--prefix=$PREREQ_DIR/${P}-x32-$LINK_TYPE_SUFFIX
+		#
+		$GCC_DEPS_LINK_TYPE
+		#
+		CFLAGS="\"$COMMON_CFLAGS\""
+		CXXFLAGS="\"$COMMON_CXXFLAGS\""
+		CPPFLAGS="\"$COMMON_CPPFLAGS\""
+		LDFLAGS="\"$COMMON_LDFLAGS\""
+	)
+	local _allconf="${_conf_flags[@]}"
+	func_configure ${B} ${P_V} "$_allconf"
 
-INSTALL_FLAGS=(
-	-j$JOBS
-	$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
-)
+	restore_paths
+}
+
+pkg_build() {
+	change_paths
+
+	local _make_flags=(
+		-j${JOBS}
+		all
+	)
+	local _allmake="${_make_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allmake" \
+		"building..." \
+		"built"
+
+	restore_paths
+}
+
+pkg_install() {
+	change_paths
+
+	local _install_flags=(
+		-j${JOBS}
+		$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
+	)
+	local _allinstall="${_install_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allinstall" \
+		"installing..." \
+		"installed"
+
+	restore_paths
+}
 
 # **************************************************************************

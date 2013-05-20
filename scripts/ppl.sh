@@ -35,55 +35,85 @@
 
 # **************************************************************************
 
-VERSION=1.0
-NAME=$ARCHITECTURE-ppl-${VERSION}-$LINK_TYPE_SUFFIX
-SRC_DIR_NAME=ppl-${VERSION}
-URL=http://bugseng.com/products/ppl/download/ftp/releases/${VERSION}/ppl-${VERSION}.tar.bz2
-TYPE=.tar.bz2
+P=ppl
+V=1.0
+TYPE=".tar.bz2"
+P_V=${P}-${V}
+SRC_FILE="${P_V}${TYPE}"
+B=${P_V}
+URL=http://bugseng.com/products/ppl/download/ftp/releases/${V}/${SRC_FILE}
 PRIORITY=prereq
 
-#
+src_download() {
+	func_download ${P_V} ${TYPE} ${URL}
+}
 
-PATCHES=(
-	ppl/ppl-resolve-conflicts-with-gmp-5.1.0.patch
-)
+src_unpack() {
+	func_uncompress ${P_V} ${TYPE}
+}
 
-#
+src_patch() {
+	local _patches=(
+		${P}/ppl-resolve-conflicts-with-gmp-5.1.0.patch
+	)
+	
+	func_apply_patches \
+		${P_V} \
+		_patches[@]
+}
 
-CONFIGURE_FLAGS=(
-	--host=$HOST
-	--build=$BUILD
-	--target=$TARGET
-	#
-	--prefix=$PREREQ_DIR/$HOST-$LINK_TYPE_SUFFIX
-	#
-	$GCC_DEPS_LINK_TYPE
-	#
-	--with-gmp=$PREREQ_DIR/$HOST-$LINK_TYPE_SUFFIX
-	#
-	--disable-documentation
-	--disable-ppl_lcdd 
-	--disable-ppl_lpsol 
-	--disable-ppl_pips
-	#
-	CFLAGS="\"$COMMON_CFLAGS\""
-	CXXFLAGS="\"$COMMON_CXXFLAGS\""
-	CPPFLAGS="\"$COMMON_CPPFLAGS\""
-	LDFLAGS="\"$COMMON_LDFLAGS\""
-)
+src_configure() {
+	local _conf_flags=(
+		--host=$HOST
+		--build=$BUILD
+		--target=$TARGET
+		#
+		--prefix=$PREREQ_DIR/$HOST-$LINK_TYPE_SUFFIX
+		#
+		$GCC_DEPS_LINK_TYPE
+		#
+		--with-gmp=$PREREQ_DIR/$HOST-$LINK_TYPE_SUFFIX
+		#
+		--disable-documentation
+		--disable-ppl_lcdd 
+		--disable-ppl_lpsol 
+		--disable-ppl_pips
+		#
+		CFLAGS="\"$COMMON_CFLAGS\""
+		CXXFLAGS="\"$COMMON_CXXFLAGS\""
+		CPPFLAGS="\"$COMMON_CPPFLAGS\""
+		LDFLAGS="\"$COMMON_LDFLAGS\""
+	)
+	local _allconf="${_conf_flags[@]}"
+	func_configure ${B} ${P_V} "$_allconf"
+}
 
-#
+pkg_build() {
+	local _make_flags=(
+		-j${JOBS}
+		all
+	)
+	local _allmake="${_make_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allmake" \
+		"building..." \
+		"built"
+}
 
-MAKE_FLAGS=(
-	-j$JOBS
-	all
-)
-
-#
-
-INSTALL_FLAGS=(
-	-j$JOBS
-	$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
-)
+pkg_install() {
+	local _install_flags=(
+		-j${JOBS}
+		$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
+	)
+	local _allinstall="${_install_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allinstall" \
+		"installing..." \
+		"installed"
+}
 
 # **************************************************************************

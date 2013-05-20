@@ -35,51 +35,83 @@
 
 # **************************************************************************
 
-VERSION=3071602
-NAME=sqlite-${VERSION}
-SRC_DIR_NAME=sqlite-autoconf-${VERSION}
-URL=http://www.sqlite.org/2013/sqlite-autoconf-${VERSION}.tar.gz
-TYPE=.tar.gz
+P=sqlite
+V=3071602
+TYPE=".tar.gz"
+P_V=${P}-autoconf-${V}
+SRC_FILE="${P_V}${TYPE}"
+B=${P_V}
+URL=http://ftp.gnu.org/pub/gnu/${P}/${SRC_FILE}
 PRIORITY=extra
 
-#
+src_download() {
+	func_download ${P_V} ${TYPE} ${URL}
+}
 
-PATCHES=()
+src_unpack() {
+	func_uncompress ${P_V} ${TYPE}
+}
 
-#
+src_patch() {
+	local _patches=(
+	)
+	
+	func_apply_patches \
+		${P_V} \
+		_patches[@]
 
-EXECUTE_AFTER_PATCH=(
-	"perl -pi -e 's#archive_cmds_need_lc=yes#archive_cmds_need_lc=no#g' configure"
-)
-#
+	local _commands=(
+		"perl -pi -e 's#archive_cmds_need_lc=yes#archive_cmds_need_lc=no#g' configure"
+	)
+	local _allcommands="${_commands[@]}"
+	func_execute ${UNPACK_DIR}/${P_V} "pre-configure" "$_allcommands"
+}
 
-CONFIGURE_FLAGS=(
-	--host=$HOST
-	--build=$BUILD
-	--target=$TARGET
-	#
-	--prefix=$LIBS_DIR
-	#
-	$LINK_TYPE_SHARED
-	#
-	CFLAGS="\"$COMMON_CFLAGS\""
-	CXXFLAGS="\"$COMMON_CXXFLAGS\""
-	CPPFLAGS="\"$COMMON_CPPFLAGS -DSQLITE_ENABLE_COLUMN_METADATA -DSQLITE_ENABLE_RTREE\""
-	LDFLAGS="\"$COMMON_LDFLAGS\""
-)
+src_configure() {
+	local _conf_flags=(
+		--host=$HOST
+		--build=$BUILD
+		--target=$TARGET
+		#
+		--prefix=$LIBS_DIR
+		#
+		$LINK_TYPE_SHARED
+		#
+		CFLAGS="\"$COMMON_CFLAGS\""
+		CXXFLAGS="\"$COMMON_CXXFLAGS\""
+		CPPFLAGS="\"$COMMON_CPPFLAGS -DSQLITE_ENABLE_COLUMN_METADATA -DSQLITE_ENABLE_RTREE\""
+		LDFLAGS="\"$COMMON_LDFLAGS\""
+	)
+	local _allconf="${_conf_flags[@]}"
+	func_configure ${B} ${P_V} "$_allconf"
+}
 
-#
+pkg_build() {
+	local _make_flags=(
+		-j${JOBS}
+		all
+	)
+	local _allmake="${_make_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allmake" \
+		"building..." \
+		"built"
+}
 
-MAKE_FLAGS=(
-	-j$JOBS
-	all
-)
-
-#
-
-INSTALL_FLAGS=(
-	-j$JOBS
-	install
-)
+pkg_install() {
+	local _install_flags=(
+		-j${JOBS}
+		install
+	)
+	local _allinstall="${_install_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allinstall" \
+		"installing..." \
+		"installed"
+}
 
 # **************************************************************************

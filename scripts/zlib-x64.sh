@@ -35,58 +35,65 @@
 
 # **************************************************************************
 
-P=libmangle
-V=
-TYPE="svn"
-P_V=${P}
-SRC_FILE=
-B=${P_V}
-URL=http://mingw-w64.svn.sourceforge.net/svnroot/mingw-w64/trunk/mingw-w64-libraries/${P}
-PRIORITY=extra
-REV=
+P=zlib
+V=1.2.8
+TYPE=".tar.gz"
+ZLIB_ARCH=x64
+P_V=${P}-${V}
+SRC_FILE="${P_V}${TYPE}"
+B=${ZLIB_ARCH}-${P_V}
+URL=http://sourceforge.net/projects/libpng/files/${P}/${V}/${SRC_FILE}
+PRIORITY=prereq
+
+change_paths() {
+	[[ $ARCHITECTURE == x32 ]] && {
+		BEFORE_ZLIB64_PRE_PATH=$PATH
+		export PATH=$x64_HOST_MINGW_PATH/bin:$ORIGINAL_PATH
+	}
+}
+
+restore_paths() {
+	[[ $ARCHITECTURE == x32 ]] && {
+		export PATH=$BEFORE_ZLIB64_PRE_PATH
+		unset BEFORE_ZLIB64_PRE_PATH
+	}
+}
 
 src_download() {
 	func_download ${P_V} ${TYPE} ${URL}
 }
 
 src_unpack() {
-	echo "--> Don't need to unpack"
+	func_uncompress ${P_V} ${TYPE}
 }
 
 src_patch() {
 	local _patches=(
+		${P}/zlib-1.2.5-nostrip.patch
+		${P}/zlib-1.2.5-tml.patch
 	)
 	
 	func_apply_patches \
 		${P_V} \
 		_patches[@]
 
-	local _commands=(
-		"autoreconf -fi"
-	)
-	local _allcommands="${_commands[@]}"
-	func_execute ${SRCS_DIR}/${P_V} "Autoreconf" "$_allcommands"
+	if [ ! -d $PREREQ_BUILD_DIR/${ZLIB_ARCH}-${P_V} ]
+	then
+		cp -rf $UNPACK_DIR/${P_V} $PREREQ_BUILD_DIR/${ZLIB_ARCH}-${P_V} || die "Cannot copy $UNPACK_DIR/${P_V} to $PREREQ_BUILD_DIR/${ZLIB_ARCH}-${P_V}"
+	fi
 }
 
 src_configure() {
-	local _conf_flags=(
-		--host=$HOST
-		--build=$BUILD
-		--target=$TARGET
-		#
-		--prefix=$PREFIX
-		#
-		CFLAGS="\"$COMMON_CFLAGS\""
-		CXXFLAGS="\"$COMMON_CXXFLAGS\""
-		CPPFLAGS="\"$COMMON_CPPFLAGS\""
-		LDFLAGS="\"$COMMON_LDFLAGS\""
-	)
-	local _allconf="${_conf_flags[@]}"
-	func_configure ${B} ${P_V} "$_allconf"
+	echo "--> Don't need to configure"
 }
 
 pkg_build() {
 	local _make_flags=(
+		-f win32/Makefile.gcc
+		CC=x86_64-w64-mingw32-gcc
+		AR=ar
+		RC=windres
+		DLLWRAP=dllwrap
 		-j${JOBS}
 		all
 	)
@@ -101,8 +108,12 @@ pkg_build() {
 
 pkg_install() {
 	local _install_flags=(
+		-f win32/Makefile.gcc
+		INCLUDE_PATH=$PREREQ_DIR/$ZLIB_ARCH-${P}/include
+		LIBRARY_PATH=$PREREQ_DIR/$ZLIB_ARCH-${P}/lib
+		BINARY_PATH=$PREREQ_DIR/$ZLIB_ARCH-${P}/bin
 		-j${JOBS}
-		$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
+		install
 	)
 	local _allinstall="${_install_flags[@]}"
 	func_make \
@@ -111,6 +122,22 @@ pkg_install() {
 		"$_allinstall" \
 		"installing..." \
 		"installed"
+
+	[[ ! -f $BUILDS_DIR/${ZLIB_ARCH}-${P_V}-post.marker ]] && {
+		mkdir -p $PREFIX/bin $PREFIX/mingw
+		[[ ($USE_MULTILIB == yes) && ($ARCHITECTURE == x32) ]] && {
+			mkdir -p $PREFIX/$TARGET/lib64
+
+			cp -f $PREREQ_DIR/$ZLIB_ARCH-${P}/lib/*.a $PREFIX/$TARGET/lib64/ || exit 1
+		} || {
+			mkdir -p $PREFIX/$TARGET/{lib,include}
+
+			cp -f $PREREQ_DIR/$ZLIB_ARCH-${P}/lib/*.a $PREFIX/$TARGET/lib/ || exit 1
+			cp -f $PREREQ_DIR/$ZLIB_ARCH-${P}/include/*.h $PREFIX/$TARGET/include/ || exit 1
+		}
+		cp -rf $PREFIX/$TARGET/* $PREFIX/mingw/ || exit 1
+		touch $BUILDS_DIR/$ZLIB_ARCH-${P_V}-post.marker
+	}
 }
 
 # **************************************************************************

@@ -35,50 +35,82 @@
 
 # **************************************************************************
 
-NAME=widl
-SRC_DIR_NAME=widl
-URL=http://mingw-w64.svn.sourceforge.net/svnroot/mingw-w64/trunk/mingw-w64-tools/widl
-TYPE=svn
-REV=
+P=widl
+V=
+TYPE="svn"
+P_V=${P}
+SRC_FILE=
+B=${P_V}
+URL=http://mingw-w64.svn.sourceforge.net/svnroot/mingw-w64/trunk/mingw-w64-tools/${P}
 PRIORITY=extra
+REV=
 
-#
+src_download() {
+	func_download ${P_V} ${TYPE} ${URL}
+}
 
-PATCHES=()
+src_unpack() {
+	echo "--> Don't need to unpack"
+}
 
-#
+src_patch() {
+	local _patches=(
+	)
+	
+	func_apply_patches \
+		${P_V} \
+		_patches[@]
 
-EXECUTE_AFTER_PATCH=(
-	"autoreconf -i"
-)
+	local _commands=(
+		"autoreconf -fi"
+	)
+	local _allcommands="${_commands[@]}"
+	func_execute ${SRCS_DIR}/${P_V} "Autoreconf" "$_allcommands"
+}
 
-#
+src_configure() {
+	local _conf_flags=(
+		--host=$HOST
+		--build=$BUILD
+		--target=$TARGET
+		#
+		--prefix=$PREFIX
+		#
+		CFLAGS="\"$COMMON_CFLAGS\""
+		CXXFLAGS="\"$COMMON_CXXFLAGS\""
+		CPPFLAGS="\"$COMMON_CPPFLAGS\""
+		LDFLAGS="\"$COMMON_LDFLAGS\""
+	)
+	local _allconf="${_conf_flags[@]}"
+	func_configure ${B} ${P_V} "$_allconf"
+}
 
-CONFIGURE_FLAGS=(
-	--host=$HOST
-	--build=$BUILD
-	--target=$TARGET
-	#
-	--prefix=$PREFIX
-	#
-	CFLAGS="\"$COMMON_CFLAGS\""
-	CXXFLAGS="\"$COMMON_CXXFLAGS\""
-	CPPFLAGS="\"$COMMON_CPPFLAGS\""
-	LDFLAGS="\"$COMMON_LDFLAGS\""
-)
+pkg_build() {
+	local _make_flags=(
+		-j${JOBS}
+		all
+	)
+	local _allmake="${_make_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allmake" \
+		"building..." \
+		"built"
+}
 
-#
-
-MAKE_FLAGS=(
-	-j$JOBS
-	all
-)
-
-#
-
-INSTALL_FLAGS=(
-	-j$JOBS
-	$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
-)
+pkg_install() {
+	local _install_flags=(
+		-j${JOBS}
+		$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
+	)
+	local _allinstall="${_install_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allinstall" \
+		"installing..." \
+		"installed"
+}
 
 # **************************************************************************

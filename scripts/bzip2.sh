@@ -35,13 +35,88 @@
 
 # **************************************************************************
 
-VERSION=1.0.6
-NAME=bzip2-${VERSION}
-SRC_DIR_NAME=bzip2-${VERSION}
-URL=http://www.bzip.org/${VERSION}/${SRC_DIR_NAME}.tar.gz
-TYPE=.tar.gz
+P=bzip2
+V=1.0.6
+TYPE=".tar.gz"
+P_V=${P}-${V}
+SRC_FILE="${P_V}${TYPE}"
+B=${P_V}
+URL=http://www.bzip.org/${V}/${SRC_FILE}
 PRIORITY=extra
 
+src_download() {
+	func_download ${P_V} ${TYPE} ${URL}
+}
+
+src_unpack() {
+	func_uncompress ${P_V} ${TYPE}
+}
+
+src_patch() {
+	local _patches=(
+		${P}/bzip2-1.0.4-bzip2recover.patch
+		${P}/bzip2-1.0.6-autoconfiscated.patch
+		${P}/bzip2-use-cdecl-calling-convention.patch
+		${P}/bzip2-1.0.5-slash.patch
+	)
+	
+	func_apply_patches \
+		${P_V} \
+		_patches[@]
+	
+	local _commands=(
+		"autogen.sh"
+	)
+	local _allcommands="${_commands[@]}"
+	func_execute ${UNPACK_DIR}/${P_V} "Autogen" "$_allcommands"
+}
+
+src_configure() {
+	local _conf_flags=(
+		--host=${HOST}
+		--build=${BUILD}
+		--target=${TARGET}
+		#
+		--prefix=${PREFIX}
+		#
+		${GCC_DEPS_LINK_TYPE}
+		#
+		CFLAGS="\"${COMMON_CFLAGS}\""
+		CXXFLAGS="\"${COMMON_CXXFLAGS}\""
+		CPPFLAGS="\"${COMMON_CPPFLAGS}\""
+		LDFLAGS="\"${COMMON_LDFLAGS}\""
+	)
+	local _allconf="${_conf_flags[@]}"
+	func_configure ${B} ${P_V} "$_allconf"
+}
+
+pkg_build() {
+	local _make_flags=(
+		-j${JOBS}
+		all
+	)
+	local _allmake="${_make_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allmake" \
+		"building..." \
+		"built"
+}
+
+pkg_install() {
+	local _install_flags=(
+		-j${JOBS}
+		install
+	)
+	local _allinstall="${_install_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allinstall" \
+		"installing..." \
+		"installed"
+}
 #
 
 PATCHES=(

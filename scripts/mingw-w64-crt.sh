@@ -35,65 +35,98 @@
 
 # **************************************************************************
 
-NAME=mingw-w64-crt
+P=mingw-w64-crt
+V=
+TYPE="svn"
+P_V=${P}
+SRC_FILE=
 [[ $USE_MULTILIB == yes ]] && {
-	NAME=$ARCHITECTURE-$NAME-multi
+	B=$ARCHITECTURE-${P}-multi
 } || {
-	NAME=$ARCHITECTURE-$NAME-nomulti
+	B=$ARCHITECTURE-${P}-nomulti
 }
-SRC_DIR_NAME=mingw-w64-crt
-URL=http://mingw-w64.svn.sourceforge.net/svnroot/mingw-w64/trunk/mingw-w64-crt
-TYPE=svn
-REV=
+URL=http://mingw-w64.svn.sourceforge.net/svnroot/mingw-w64/trunk/${P}
 PRIORITY=runtime
+REV=
 
-#
-
-PATCHES=()
-
-#
-
-[[ $USE_MULTILIB == yes ]] && {
-	LIBCONF="--enable-lib32 --enable-lib64"
-	CRTPREFIX=$RUNTIME_DIR/$ARCHITECTURE-mingw-w64-multi
-} || {
-	CRTPREFIX=$RUNTIME_DIR/$ARCHITECTURE-mingw-w64-nomulti
-	[[ $ARCHITECTURE == x32 ]] && {
-		LIBCONF="--enable-lib32 --disable-lib64"
-	} || {
-		LIBCONF="--disable-lib32 --enable-lib64"
-	}
+src_download() {
+	func_download ${P_V} ${TYPE} ${URL}
 }
 
-CONFIGURE_FLAGS=(
-	--host=$HOST
-	--build=$BUILD
-	--target=$TARGET
-	#
-	--prefix=$CRTPREFIX
-	--with-sysroot=$CRTPREFIX
-	#
-	$LIBCONF
-	--enable-wildcard
-	#
-	CFLAGS="\"$COMMON_CFLAGS\""
-	CXXFLAGS="\"$COMMON_CXXFLAGS\""
-	CPPFLAGS="\"$COMMON_CPPFLAGS\""
-	LDFLAGS="\"$COMMON_LDFLAGS\""
-)
+src_unpack() {
+	echo "--> Don't need to unpack"
+}
 
-#
+src_patch() {
+	local _patches=(
+	)
+	
+	func_apply_patches \
+		${P_V} \
+		_patches[@]
+}
 
-MAKE_FLAGS=(
-	-j$JOBS
-	all
-)
+src_configure() {
+	local _libconf=
+	local _crtprefix=$RUNTIME_DIR/$ARCHITECTURE-mingw-w64
+	[[ $USE_MULTILIB == yes ]] && {
+		_libconf="--enable-lib32 --enable-lib64"
+		_crtprefix=${_crtprefix}-multi
+	} || {
+		_crtprefix=${_crtprefix}-nomulti
+		[[ $ARCHITECTURE == x32 ]] && {
+			_libconf="--enable-lib32 --disable-lib64"
+		} || {
+			_libconf="--disable-lib32 --enable-lib64"
+		}
+	}
 
-#
+	local _conf_flags=(
+		--host=$HOST
+		--build=$BUILD
+		--target=$TARGET
+		#
+		--prefix=$_crtprefix
+		--with-sysroot=$_crtprefix
+		#
+		$_libconf
+		--enable-wildcard
+		#
+		CFLAGS="\"$COMMON_CFLAGS\""
+		CXXFLAGS="\"$COMMON_CXXFLAGS\""
+		CPPFLAGS="\"$COMMON_CPPFLAGS\""
+		LDFLAGS="\"$COMMON_LDFLAGS\""
+	)
+	local _allconf="${_conf_flags[@]}"
+	func_configure ${B} ${P_V} "$_allconf"
+}
 
-INSTALL_FLAGS=(
-	-j$JOBS
-	$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
-)
+pkg_build() {
+	local _make_flags=(
+		-j${JOBS}
+		all
+	)
+	local _allmake="${_make_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allmake" \
+		"building..." \
+		"built"
+}
+
+pkg_install() {
+	local _install_flags=(
+		-j${JOBS}
+		$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
+	)
+	local _allinstall="${_install_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allinstall" \
+		"installing..." \
+		"installed"
+}
 
 # **************************************************************************

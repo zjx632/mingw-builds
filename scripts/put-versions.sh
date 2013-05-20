@@ -44,7 +44,7 @@
 	for sub in ${SUBTARGETS[@]}; do
 		[[ $sub == put-versions ]] && continue
 		
-		_pack_type=$( grep 'TYPE=' $TOP_DIR/scripts/${sub}.sh )
+		_pack_type=$( grep 'TYPE=' $PORTS_DIR/${sub}.sh )
 		[[ -n $_pack_type ]] && {
 			_pack_type=$( echo "$_pack_type" | sed 's|TYPE=||g' )
 			#_pack_name=$( grep 'SRC_DIR_NAME=' $TOP_DIR/scripts/${sub}.sh | sed 's|SRC_DIR_NAME=||' )
@@ -57,11 +57,11 @@
 			echo "name: $_pack_name" >> $VERSION_FILE
 			echo "url: $_url" >> $VERSION_FILE
 			
-			cd $SRCS_DIR/$_pack_name
-			[[ $? != 0 ]] && { echo "error in $SRCS_DIR/$_pack_name"; exit 1; }
+			cd $UNPACK_DIR/$_pack_name
+			[[ $? != 0 ]] && { echo "error in $UNPACK_DIR/$_pack_name"; exit 1; }
 
 			case $_pack_type in
-				cvs) echo "revision: $( grep 'REV=' $TOP_DIR/scripts/${sub}.sh | sed 's|REV=||' )" >> $VERSION_FILE ;;
+				cvs) echo "revision: $( grep 'REV=' $PORTS_DIR/${sub}.sh | sed 's|REV=||' )" >> $VERSION_FILE ;;
 				svn) echo "revision: $( svn info | grep 'Revision: ' | sed 's|Revision: ||' )" >> $VERSION_FILE ;;
 				hg) echo "revision: unimplemented" >> $VERSION_FILE ;;
 				git) echo "SHA1: $( export TERM=cygwin && git log -1 --pretty=format:%H )" >> $VERSION_FILE ;;

@@ -35,75 +35,121 @@
 
 # **************************************************************************
 
-VERSION=2.23.2
-NAME=binutils-${VERSION}
+P=binutils
+V=2.23.2
+TYPE=".tar.bz2"
+P_V=${P}-${V}
+SRC_FILE="${P_V}${TYPE}"
+# Build directory name
 [[ $USE_MULTILIB == yes ]] && {
-	NAME=$ARCHITECTURE-$NAME-multi
+	B=$ARCHITECTURE-${P_V}-multi
 } || {
-	NAME=$ARCHITECTURE-$NAME-nomulti
+	B=$ARCHITECTURE-${P_V}-nomulti
 }
-SRC_DIR_NAME=binutils-${VERSION}
-URL=ftp://mirrors.kernel.org/sources.redhat.com/binutils/releases/binutils-${VERSION}.tar.bz2
-TYPE=.tar.bz2
+URL=ftp://mirrors.kernel.org/sources.redhat.com/${P}/releases/${SRC_FILE}
 PRIORITY=prereq
 
-#
-
-PATCHES=()
-
-#
-
-[[ $USE_MULTILIB == yes ]] && {
-	BINUTILSPREFIX=$PREREQ_DIR/$ARCHITECTURE-binutils-multi
-	RUNTIMEPREFIX=$RUNTIME_DIR/$ARCHITECTURE-mingw-w64-multi
-} || {
-	BINUTILSPREFIX=$PREREQ_DIR/$ARCHITECTURE-binutils-nomulti
-	RUNTIMEPREFIX=$RUNTIME_DIR/$ARCHITECTURE-mingw-w64-nomulti
+src_download() {
+	func_download ${P_V} ${TYPE} ${URL}
 }
 
-CONFIGURE_FLAGS=(
-	--host=$HOST
-	--build=$BUILD
-	--target=$TARGET
-	#
-	--prefix=$BINUTILSPREFIX
-	--with-sysroot=$RUNTIMEPREFIX
-	#
-	$( [[ $USE_MULTILIB == yes ]] \
-		&& echo "--enable-targets=$ENABLE_TARGETS --enable-multilib --enable-64-bit-bfd" \
-		|| echo "--disable-multilib"
+src_unpack() {
+	func_uncompress ${P_V} ${TYPE}
+}
+
+src_patch() {
+	local _patches=(
 	)
-	#
-	$( [[ $ARCHITECTURE == x64 ]] \
-		&& echo "--enable-64-bit-bfd" \
+	
+	func_apply_patches \
+		${P_V} \
+		_patches[@]
+}
+
+src_configure() {
+	local _binutilsprefix=${PREREQ_DIR}/${ARCHITECTURE}-${P}
+	local _runtimeprefix=${RUNTIME_DIR}/${ARCHITECTURE}-mingw-w64
+	[[ ${USE_MULTILIB} == yes ]] && {
+		_binutilsprefix=${_binutilsprefix}-multi
+		_runtimeprefix=${_runtimeprefix}-multi
+	} || {
+		_binutilsprefix=${_binutilsprefix}-nomulti
+		_runtimeprefix=${_runtimeprefix}-nomulti
+	}
+
+	local _conf_flags=(
+		--host=${HOST}
+		--build=${BUILD}
+		--target=${TARGET}
+		#
+		--prefix=$_binutilsprefix
+		--with-sysroot=$_runtimeprefix
+		#
+		$( [[ ${USE_MULTILIB} == yes ]] \
+			&& echo "--enable-targets=${ENABLE_TARGETS} --enable-multilib --enable-64-bit-bfd" \
+			|| echo "--disable-multilib"
+		)
+		#
+		$( [[ ${ARCHITECTURE} == x64 ]] \
+			&& echo "--enable-64-bit-bfd" \
+		)
+		#
+		--enable-lto
+		#
+		--with-libiconv-prefix=${PREREQ_DIR}/libiconv-${ARCHITECTURE}
+		#
+		--disable-nls
+		#
+		${LINK_TYPE_BOTH}
+		#
+		CFLAGS="\"${COMMON_CFLAGS}\""
+		CXXFLAGS="\"${COMMON_CXXFLAGS}\""
+		CPPFLAGS="\"${COMMON_CPPFLAGS}\""
+		LDFLAGS="\"${COMMON_LDFLAGS} $( [[ ${ARCHITECTURE} == x32 ]] && echo -Wl,--large-address-aware )\""
 	)
-	#
-	--enable-lto
-	#
-	--with-libiconv-prefix=$PREREQ_DIR/libiconv-$ARCHITECTURE
-	#
-	--disable-nls
-	#
-	$LINK_TYPE_BOTH
-	#
-	CFLAGS="\"$COMMON_CFLAGS\""
-	CXXFLAGS="\"$COMMON_CXXFLAGS\""
-	CPPFLAGS="\"$COMMON_CPPFLAGS\""
-	LDFLAGS="\"$COMMON_LDFLAGS $( [[ $ARCHITECTURE == x32 ]] && echo -Wl,--large-address-aware )\""
-)
+	local _allconf="${_conf_flags[@]}"
+	func_configure ${B} ${P_V} "$_allconf"
+}
 
-#
+pkg_build() {
+	local _make_flags=(
+		-j${JOBS}
+		all
+	)
+	local _allmake="${_make_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allmake" \
+		"building..." \
+		"built"
+}
 
-MAKE_FLAGS=(
-	-j$JOBS
-	all
-)
+pkg_install() {
+	local _install_flags=(
+		-j${JOBS}
+		$( [[ ${STRIP_ON_INSTALL} == yes ]] && echo install-strip || echo install )
+	)
+	local _allinstall="${_install_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allinstall" \
+		"installing..." \
+		"installed"
+		
+	local _binutilsprefix=${PREREQ_DIR}/${ARCHITECTURE}-${P}
+	[[ ${USE_MULTILIB} == yes ]] && {
+		_binutilsprefix=${_binutilsprefix}-multi
+	} || {
+		_binutilsprefix=${_binutilsprefix}-nomulti
+	}
 
-#
-
-INSTALL_FLAGS=(
-	-j$JOBS
-	$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
-)
+	if [ ! -f $CURR_BUILD_DIR/binutils-post.marker ]
+	then
+		cp -rf $BINUTILSPREFIX/* $PREFIX || die "Cannot copy $BINUTILSPREFIX/* to $PREFIX"
+		touch $CURR_BUILD_DIR/binutils-post.marker
+	fi
+}
 
 # **************************************************************************

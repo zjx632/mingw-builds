@@ -35,51 +35,81 @@
 
 # **************************************************************************
 
-VERSION=6.2
-NAME=readline-${VERSION}
-SRC_DIR_NAME=readline-${VERSION}
-URL=ftp://ftp.gnu.org/gnu/readline/readline-${VERSION}.tar.gz
-TYPE=.tar.gz
+P=readline
+V=6.2
+TYPE=".tar.gz"
+P_V=${P}-${V}
+SRC_FILE="${P_V}${TYPE}"
+B=${P_V}
+URL=http://ftp.gnu.org/pub/gnu/${P}/${SRC_FILE}
 PRIORITY=extra
 
-#
+src_download() {
+	func_download ${P_V} ${TYPE} ${URL}
+}
 
-PATCHES=(
-	readline/readline62-001
-	readline/readline62-002
-	readline/readline62-003
-	readline/readline62-004
-)
+src_unpack() {
+	func_uncompress ${P_V} ${TYPE}
+}
 
-#
+src_patch() {
+	local _patches=(
+		${P}/readline62-001
+		${P}/readline62-002
+		${P}/readline62-003
+		${P}/readline62-004
+	)
+	
+	func_apply_patches \
+		${P_V} \
+		_patches[@]
+}
 
-CONFIGURE_FLAGS=(
-	--host=$HOST
-	--build=$BUILD
-	--target=$TARGET
-	#
-	--prefix=$LIBS_DIR
-	#
-	$LINK_TYPE_SHARED
-	#
-	CFLAGS="\"$COMMON_CFLAGS -D__USE_MINGW_ANSI_STDIO=1\""
-	CXXFLAGS="\"$COMMON_CXXFLAGS\""
-	CPPFLAGS="\"$COMMON_CPPFLAGS\""
-	LDFLAGS="\"$COMMON_LDFLAGS\""
-)
+src_configure() {
+	local _conf_flags=(
+		--host=$HOST
+		--build=$BUILD
+		--target=$TARGET
+		#
+		--prefix=$LIBS_DIR
+		#
+		$LINK_TYPE_SHARED
+		#
+		CFLAGS="\"$COMMON_CFLAGS -D__USE_MINGW_ANSI_STDIO=1\""
+		CXXFLAGS="\"$COMMON_CXXFLAGS\""
+		CPPFLAGS="\"$COMMON_CPPFLAGS\""
+		LDFLAGS="\"$COMMON_LDFLAGS\""
+	)
+	local _allconf="${_conf_flags[@]}"
+	func_configure ${B} ${P_V} "$_allconf"
+}
 
-#
+pkg_build() {
+	local _make_flags=(
+		-j${JOBS}
+		all
+	)
+	local _allmake="${_make_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allmake" \
+		"building..." \
+		"built"
+}
 
-MAKE_FLAGS=(
-	-j$JOBS
-	all
-)
-
-#
-
-INSTALL_FLAGS=(
-	-j$JOBS
-	install
-)
+pkg_install() {
+	local _install_flags=(
+		-j${JOBS}
+		install
+	)
+	local _allinstall="${_install_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allinstall" \
+		"installing..." \
+		"installed"
+}
 
 # **************************************************************************

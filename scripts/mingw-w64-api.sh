@@ -35,58 +35,89 @@
 
 # **************************************************************************
 
-NAME=mingw-w64-headers
+P=mingw-w64-headers
+V=
+TYPE="svn"
+P_V=${P}
+SRC_FILE=
 [[ $USE_MULTILIB == yes ]] && {
-	NAME=$ARCHITECTURE-$NAME-multi
+	B=$ARCHITECTURE-${P}-multi
 } || {
-	NAME=$ARCHITECTURE-$NAME-nomulti
+	B=$ARCHITECTURE-${P}-nomulti
 }
-SRC_DIR_NAME=mingw-w64-headers
-URL=http://mingw-w64.svn.sourceforge.net/svnroot/mingw-w64/trunk/mingw-w64-headers
-TYPE=svn
-REV=
+URL=http://mingw-w64.svn.sourceforge.net/svnroot/mingw-w64/trunk/${P}
 PRIORITY=runtime
+REV=
 
-#
-
-PATCHES=()
-
-#
-
-[[ $USE_MULTILIB == yes ]] && {
-	RUNTIMEPREFIX=$RUNTIME_DIR/$ARCHITECTURE-mingw-w64-multi
-} || {
-	RUNTIMEPREFIX=$RUNTIME_DIR/$ARCHITECTURE-mingw-w64-nomulti
+src_download() {
+	func_download ${P_V} ${TYPE} ${URL}
 }
 
-CONFIGURE_FLAGS=(
-	--host=$HOST
-	--build=$BUILD
-	--target=$TARGET
-	#
-	--prefix=$RUNTIMEPREFIX
-	#
-	--enable-sdk=all
-	--enable-secure-api
-	#
-	CFLAGS="\"$COMMON_CFLAGS\""
-	CXXFLAGS="\"$COMMON_CXXFLAGS\""
-	CPPFLAGS="\"$COMMON_CPPFLAGS\""
-	LDFLAGS="\"$COMMON_LDFLAGS\""
-)
+src_unpack() {
+	echo "--> Don't need to unpack"
+}
 
-#
+src_patch() {
+	local _patches=(
+	)
+	
+	func_apply_patches \
+		${P_V} \
+		_patches[@]
+}
 
-MAKE_FLAGS=(
-	-j$JOBS
-	all
-)
+src_configure() {
+	local _runtimeprefix=$RUNTIME_DIR/$ARCHITECTURE-mingw-w64
+	[[ $USE_MULTILIB == yes ]] && {
+		_runtimeprefix=${_runtimeprefix}-multi
+	} || {
+		_runtimeprefix=${_runtimeprefix}-nomulti
+	}
+	local _conf_flags=(
+		--host=$HOST
+		--build=$BUILD
+		--target=$TARGET
+		#
+		--prefix=$_runtimeprefix
+		#
+		--enable-sdk=all
+		--enable-secure-api
+		#
+		CFLAGS="\"$COMMON_CFLAGS\""
+		CXXFLAGS="\"$COMMON_CXXFLAGS\""
+		CPPFLAGS="\"$COMMON_CPPFLAGS\""
+		LDFLAGS="\"$COMMON_LDFLAGS\""
+	)
+	local _allconf="${_conf_flags[@]}"
+	func_configure ${B} ${P_V} "$_allconf"
+}
 
-#
+pkg_build() {
+	local _make_flags=(
+		-j${JOBS}
+		all
+	)
+	local _allmake="${_make_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allmake" \
+		"building..." \
+		"built"
+}
 
-INSTALL_FLAGS=(
-	-j$JOBS
-	$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
-)
+pkg_install() {
+	local _install_flags=(
+		-j${JOBS}
+		$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
+	)
+	local _allinstall="${_install_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allinstall" \
+		"installing..." \
+		"installed"
+}
 
 # **************************************************************************

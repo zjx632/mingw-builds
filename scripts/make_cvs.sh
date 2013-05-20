@@ -35,61 +35,108 @@
 
 # **************************************************************************
 
-NAME=make
-SRC_DIR_NAME=make
+P=make
+V=
+TYPE="cvs"
+P_V=${P}
+SRC_FILE=
+B=${P_V}
 URL=":pserver:anonymous:@cvs.sv.gnu.org:/sources/make"
-TYPE=cvs
-REV=09/21/2012
 PRIORITY=extra
+REV=09/21/2012
 
-#
+src_download() {
+	func_download ${P_V} ${TYPE} ${URL} ${REV}
+}
 
-PATCHES=(
-	make/make-remove-double-quote.patch
-	make/make-linebuf-mingw.patch
-	make/make-getopt.patch
-	make/make-Windows-Add-move-to-sh_cmds_dos.patch
-)
+src_unpack() {
+	echo "--> Don't need to unpack"
+}
 
-#
+src_patch() {
+	local _patches=(
+		${P}/make-remove-double-quote.patch
+		${P}/make-linebuf-mingw.patch
+		${P}/make-getopt.patch
+		${P}/make-Windows-Add-move-to-sh_cmds_dos.patch
+	)
+	
+	func_apply_patches \
+		${P_V} \
+		_patches[@]
 
-EXECUTE_AFTER_PATCH=(
-	"autoreconf -i"
-)
+	local _commands=(
+		"autoreconf -fi"
+	)
+	local _allcommands="${_commands[@]}"
+	func_execute ${SRCS_DIR}/${P_V} "Autoreconf" "$_allcommands"
+}
 
-#
+src_configure() {
+	local _conf_flags=(
+		--host=$HOST
+		--build=$TARGET
+		--prefix=$PREFIX
+		--enable-case-insensitive-file-system
+		--program-prefix=mingw32-
+		--enable-job-server
+		--without-guile
+		CFLAGS="\"$COMMON_CFLAGS\""
+		LDFLAGS="\"$COMMON_LDFLAGS -L$LIBS_DIR/lib\""
+	)
+	local _allconf="${_conf_flags[@]}"
+	func_configure ${B} ${P_V} "$_allconf"
+}
 
-CONFIGURE_FLAGS=(
-	--host=$HOST
-	--build=$TARGET
-	--prefix=$PREFIX
-	--enable-case-insensitive-file-system
-	--program-prefix=mingw32-
-	--enable-job-server
-	--without-guile
-	CFLAGS="\"$COMMON_CFLAGS\""
-	LDFLAGS="\"$COMMON_LDFLAGS -L$LIBS_DIR/lib\""
-)
+pkg_build() {
 
-#
+	local _make_flags=(
+		do-po-update
+	)
+	local _allmake="${_make_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allmake" \
+		"update po files..." \
+		"po-updated"
+		
+	_make_flags=(
+		scm-update
+	)
+	_allmake="${_make_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allmake" \
+		"update doc files..." \
+		"scm-updated"
+		
+	_make_flags=(
+		-j${JOBS}
+		all
+	)
+	_allmake="${_make_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allmake" \
+		"building..." \
+		"built"
+}
 
-EXECUTE_BEFORE_MAKE=(
-	"make do-po-update"
-	"make scm-update"
-)
-
-#
-
-MAKE_FLAGS=(
-	-j$JOBS
-	all
-)
-
-#
-
-INSTALL_FLAGS=(
-	-j$JOBS
-	$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
-)
+pkg_install() {
+	local _install_flags=(
+		-j${JOBS}
+		$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
+	)
+	local _allinstall="${_install_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allinstall" \
+		"installing..." \
+		"installed"
+}
 
 # **************************************************************************

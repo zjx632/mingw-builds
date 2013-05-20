@@ -35,43 +35,74 @@
 
 # **************************************************************************
 
-VERSION=3.82
-NAME=make-${VERSION}
-SRC_DIR_NAME=make-${VERSION}
-URL=ftp://ftp.gnu.org/gnu/make/make-${VERSION}.tar.bz2
-TYPE=.tar.bz2
+P=make
+V=3.82
+TYPE=".tar.bz2"
+P_V=${P}-${V}
+SRC_FILE=${P_V}${TYPE}
+B=${P_V}
+URL=ftp://ftp.gnu.org/gnu/${P}/${SRC_FILE}
 PRIORITY=extra
 
-#
+src_download() {
+	func_download ${P_V} ${TYPE} ${URL}
+}
 
-PATCHES=(
-	make/make-Windows-Add-move-to-sh_cmds_dos.patch
-)
+src_unpack() {
+	func_uncompress ${P_V} ${TYPE}
+}
 
-#
+src_patch() {
+	local _patches=(
+		${P}/make-Windows-Add-move-to-sh_cmds_dos.patch
+	)
+	
+	func_apply_patches \
+		${P_V} \
+		_patches[@]
+}
 
-CONFIGURE_FLAGS=(
-	--host=$HOST
-	--build=$TARGET
-	--prefix=$PREFIX
-   --enable-case-insensitive-file-system
-   --program-prefix=mingw32-
-	CFLAGS="\"$COMMON_CFLAGS\""
-	LDFLAGS="\"$COMMON_LDFLAGS -L$LIBS_DIR/lib\""
-)
+src_configure() {
+	local _conf_flags=(
+		--host=$HOST
+		--build=$TARGET
+		--prefix=$PREFIX
+		--enable-case-insensitive-file-system
+		--program-prefix=mingw32-
+		--enable-job-server
+		CFLAGS="\"$COMMON_CFLAGS\""
+		LDFLAGS="\"$COMMON_LDFLAGS -L$LIBS_DIR/lib\""
+	)
+	local _allconf="${_conf_flags[@]}"
+	func_configure ${B} ${P_V} "$_allconf"
+}
 
-#
+pkg_build() {
+	local _make_flags=(
+		-j${JOBS}
+		all
+	)
+	local _allmake="${_make_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allmake" \
+		"building..." \
+		"built"
+}
 
-MAKE_FLAGS=(
-	-j$JOBS
-	all
-)
-
-#
-
-INSTALL_FLAGS=(
-	-j$JOBS
-	$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
-)
+pkg_install() {
+	local _install_flags=(
+		-j${JOBS}
+		$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
+	)
+	local _allinstall="${_install_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allinstall" \
+		"installing..." \
+		"installed"
+}
 
 # **************************************************************************

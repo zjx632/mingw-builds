@@ -35,64 +35,97 @@
 
 # **************************************************************************
 
-VERSION=2.5.1
-NAME=libgnurx-${VERSION}
-SRC_DIR_NAME=mingw-libgnurx-${VERSION}
-URL=https://sourceforge.net/projects/mingw/files/Other/UserContributed/regex/mingw-regex-${VERSION}/mingw-libgnurx-${VERSION}-src.tar.gz
-TYPE=.tar.gz
+P=mingw-libgnurx
+V=2.5.1
+TYPE=".tar.gz"
+P_V=${P}-${V}
+SRC_FILE="${P_V}-src${TYPE}"
+B=${P}-${V}
+URL=https://sourceforge.net/projects/mingw/files/Other/UserContributed/regex/mingw-regex-${V}/${P_V}
 PRIORITY=extra
 
-#
+src_download() {
+	func_download ${P_V} ${TYPE} ${URL}
+}
 
-PATCHES=(
-	libgnurx/mingw32-libgnurx-honor-destdir.patch
-)
+src_unpack() {
+	func_uncompress ${P_V} ${TYPE}
+}
 
-#
+src_patch() {
+	local _patches=(
+		libgnurx/mingw32-libgnurx-honor-destdir.patch
+	)
+	
+	func_apply_patches \
+		${P_V} \
+		_patches[@]
 
-EXECUTE_AFTER_PATCH=(
-	"cp -rf $PATCHES_DIR/libgnurx/mingw32-libgnurx-configure.ac $SRCS_DIR/mingw-libgnurx-2.5.1/configure.ac"
-	"cp -rf $PATCHES_DIR/libgnurx/mingw32-libgnurx-Makefile.am $SRCS_DIR/mingw-libgnurx-2.5.1/Makefile.am"
-	"touch AUTHORS"
-	"touch NEWS"
-	"libtoolize --copy"
-	"aclocal"
-	"autoconf"
-	"automake --add-missing"
-)
+	local _commands=(
+		"cp -rf $PATCHES_DIR/libgnurx/mingw32-libgnurx-configure.ac $UNPACK_DIR/${P}-${V}/configure.ac"
+		"cp -rf $PATCHES_DIR/libgnurx/mingw32-libgnurx-Makefile.am $UNPACK_DIR/${P}-${V}/Makefile.am"
+		"touch AUTHORS"
+		"touch NEWS"
+		"libtoolize --copy"
+		"aclocal"
+		"autoconf"
+		"automake --add-missing"
+	)
+	local _allcommands="${_commands[@]}"
+	func_execute ${UNPACK_DIR}/${P}-${V} "Autoreconf" "$_allcommands"
+}
 
-#
+src_configure() {
+	local _conf_flags=(
+		--host=$HOST
+		--build=$BUILD
+		--target=$TARGET
+		#
+		--prefix=$LIBS_DIR
+		#
+		$LINK_TYPE_STATIC
+		#
+		CFLAGS="\"$COMMON_CFLAGS\""
+		CXXFLAGS="\"$COMMON_CXXFLAGS\""
+		CPPFLAGS="\"$COMMON_CPPFLAGS\""
+		LDFLAGS="\"$COMMON_LDFLAGS\""
+	)
+	local _allconf="${_conf_flags[@]}"
+	func_configure ${B} ${P}-${V} "$_allconf"
+}
 
-CONFIGURE_FLAGS=(
-	--host=$HOST
-	--build=$BUILD
-	--target=$TARGET
-	#
-	--prefix=$LIBS_DIR
-	#
-	$LINK_TYPE_STATIC
-	#
-	CFLAGS="\"$COMMON_CFLAGS\""
-	CXXFLAGS="\"$COMMON_CXXFLAGS\""
-	CPPFLAGS="\"$COMMON_CPPFLAGS\""
-	LDFLAGS="\"$COMMON_LDFLAGS\""
-)
+pkg_build() {
+	local _make_flags=(
+		-j${JOBS}
+		all
+	)
+	local _allmake="${_make_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allmake" \
+		"building..." \
+		"built"
+}
 
-#
+pkg_install() {
+	local _install_flags=(
+		-j${JOBS}
+		install
+	)
+	local _allinstall="${_install_flags[@]}"
+	func_make \
+		${B} \
+		"/bin/make" \
+		"$_allinstall" \
+		"installing..." \
+		"installed"
 
-MAKE_FLAGS=(
-	-j$JOBS
-	all
-)
-
-#
-
-INSTALL_FLAGS=(
-	install
-)
-
-EXECUTE_AFTER_INSTALL=(
-	"cp -f $LIBS_DIR/lib/libgnurx.a $LIBS_DIR/lib/libregex.a"
-)
+	if [ ! -f $CURR_BUILD_DIR/${P}-${V}/libregex.marker ]
+	then
+		cp -f $LIBS_DIR/lib/libgnurx.a $LIBS_DIR/lib/libregex.a || die "Cannot copy $LIBS_DIR/lib/libgnurx.a to $LIBS_DIR/lib/libregex.a"
+		touch $CURR_BUILD_DIR/${P}-${V}/libregex.marker
+	fi
+}
 
 # **************************************************************************
