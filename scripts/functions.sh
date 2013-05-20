@@ -219,38 +219,37 @@ function func_uncompress {
 # execute list of commands
 function func_execute {
 	# $1 - execute dir
-	# $2 - src dir name
-	# $3 - message
-	# $4 - log suffix
-	# $5 - log dir
-	# $6 - commands list
+	# $2 - message
+	# $3 - commands list
 
 	local _result=0
-	local -a _commands=( "${!6}" )
+	local _index=0
+	local -a _commands=( "${!3}" )
+
+	[[ ${#_commands[@]} == 0 ]] && {
+		echo "--> No commands to execute"
+		return 0
+	}
 	
-	_index=0
 	((_index=${#_commands[@]}-1))
-	local _cmd_marker_name=$1/$2/exec-$4-$_index.marker
+	local _cmd_marker_name=$1/exec-$2-$_index.marker
 	[[ -f $_cmd_marker_name ]] && {
 		echo "---> executed"
 		return $_result
 	}
 	_index=0
 
-	[[ ${#_commands[@]} > 0 ]] && {
-		echo -n "--> $3"
-	}
-
+	echo -n "--> $2"
 	for it in "${_commands[@]}"; do
-		_cmd_marker_name=$1/$2/exec-$4-$_index.marker
-		local _cmd_log_name=$1/$2/exec-$4-$_index.log
+		_cmd_marker_name=$1/exec-$2-$_index.marker
+		local _cmd_log_name=$1/exec-$2-$_index.log
 
 		[[ ! -f $_cmd_marker_name ]] && {
-			( cd $1/$2 && eval ${it} > $_cmd_log_name 2>&1 )
+			( cd $1 && eval ${it} > $_cmd_log_name 2>&1 )
 			_result=$?
 			[[ $_result != 0 ]] && {
-				echo "error!"
-				return $_result
+				[[ ${SHOW_LOG_ON_ERROR} == yes ]] && ${LOGVIEWER} $_cmd_log_name &
+				die "Error $_result"
 			} || {
 				touch $_cmd_marker_name
 			}
@@ -291,10 +290,7 @@ function func_apply_patches {
 	}
 	_index=0
 
-	[[ ${#_list[@]} > 0 ]] && {
-		echo -n "--> patching..."
-	}
-
+	echo -n "--> patching..."
 	for it in ${_list[@]} ; do
 		local _patch_marker_name=$_src_dir/$1/_patch-$_index.marker
 
