@@ -76,16 +76,13 @@ function func_absolute_to_relative {
 
 # download the sources
 function func_download {
-	# $1 - srcs root path
-	# $2 - src dir name
-	# $3 - sources type: .tar.gz, .tar.bz2 e.t.c...
+	# $1 - package name
+	# $2 - sources type: .tar.gz, .tar.bz2 e.t.c...
 	#      if sources get from a repository, choose it's type: cvs, svn, hg, git
-	# $4 - URL
-	# $5 - log file name
-	# $6 - marker file name
-	# $7 - revision
+	# $3 - URL
+	# $4 - revision
 
-	[[ -z $4 ]] && {
+	[[ -z $3 ]] && {
 		die "URL is empty. terminate."
 	}
 
@@ -93,105 +90,128 @@ function func_download {
 	local _WGET_TRIES=10
 	local _WGET_WAIT=2
 	local _result=0
-	local _filename=$(basename $4)
+	local _log_name=${MARKERS_DIR}/${1//\//_}-download.log
+	local _marker_name=${MARKERS_DIR}/${1//\//_}-download.marker
 
-	[[ $3 == cvs || $3 == svn || $3 == hg || $3 == git ]] && {
-		local _lib_name=$1/$2
-	} || {
-		local _lib_name=$1/$2$3
-	}
+	local _lib_name=${SRCS_DIR}/$1
+	local _filename=$(basename $3)
 
-	[[ ! -f $6 ]] && {
-		[[ -f $1/$_filename ]] && {
+	[[ ! -f $_marker_name || "$2" == "git" ]] && {
+		[[ -f ${SRCS_DIR}/$_filename ]] && {
 			echo -n "--> Delete corrupted download..."
-			rm -f $1/$_filename
+			rm -f ${SRCS_DIR}/$_filename
 			echo " done"
 		}
-		echo -n "--> download..."
-		case $3 in
+		pushd ${SRCS_DIR} > /dev/null
+		echo -n "--> download $1 ..."
+		case $2 in
 			cvs)
-				local _prev_dir=$PWD
-				cd $1
-				[[ -n $7 ]] && {
-					cvs -z9 -d $4 co -D$7 $2 > $5 2>&1
+				#local _prev_dir=$PWD
+				#cd $1
+				[[ -n $4 ]] && {
+					cvs -z9 -d $3 co -D$4 $1 > $_log_name 2>&1
 				} || {
-					cvs -z9 -d $4 co $2 > $5 2>&1
+					cvs -z9 -d $3 co $1 > $_log_name 2>&1
 				}
-				cd $_prev_dir
+				#cd $_prev_dir
 				_result=$?
 			;;
 			svn)
-				[[ -n $7 ]] && {
-					svn co -r $7 $4 $_lib_name > $5 2>&1
+				[[ -n $4 ]] && {
+					svn co -r $4 $3 $_lib_name > $_log_name 2>&1
 				} || {
-					svn co $4 $_lib_name > $5 2>&1
+					svn co $3 $_lib_name > $_log_name 2>&1
 				}
 				_result=$?
 			;;
 			hg)
-				hg clone $4 $_lib_name > $5 2>&1
+				hg clone $3 $_lib_name > $_log_name 2>&1
 				_result=$?
 			;;
 			git)
-				[[ -n $7 ]] && {
-					git clone --branch $7 $4 $_lib_name > $5 2>&1
+				[[ -d $_lib_name/.git ]] && {
+					cd $_lib_name
+					git pull > $_log_name 2>&1
 				} || {
-					git clone $4 $_lib_name > $5 2>&1
+					[[ -n $4 ]] && {
+						git clone --branch $4 $3 $_lib_name > $_log_name 2>&1
+					} || {
+						git clone $3 $_lib_name > $_log_name 2>&1
+					}
 				}
 				_result=$?
 			;;
 			*)
-				[[ ! -f $6 && -f $_lib_name ]] && rm -rf $_lib_name
+				[[ ! -f $_marker_name && -f $_lib_name ]] && rm -rf $_lib_name
 				wget \
 					--tries=$_WGET_TRIES \
 					--timeout=$_WGET_TIMEOUT \
 					--wait=$_WGET_WAIT \
 					--no-check-certificate \
-					$4 -O $_lib_name > $5 2>&1
+					$3 > $_log_name 2>&1
 				_result=$?
 			;;
 		esac
-
-		[[ $_result == 0 ]] && { echo " done"; touch $6; } || { echo " error!"; }
+		popd > /dev/null
+		[[ $_result == 0 ]] && {
+			echo " done"
+			touch $_marker_name
+		} || {
+			[[ ${SHOW_LOG_ON_ERROR} == yes ]] && ${LOGVIEWER} $_log_name &
+			die " error $_result!"
+		}
 	} || {
 		echo "---> downloaded"
 	}
-	return $_result
 }
 
 # **************************************************************************
 
 # uncompress sources
 function func_uncompress {
-	# $1 - srcs root path
-	# $2 - name
-	# $3 - ext
-	# $4 - marker file name
-	# $5 - log file name
+	# $1 - program name with version
+	# $2 - extension
+	# $3 - top sources directory
 
+	local _src_dir=${UNPACK_DIR}
+	local _ignore_error=0
+	local _marker_location=${MARKERS_DIR}
+
+	[[ "x$3" != "x" ]] && {
+		_src_dir=$3
+		_marker_location=$3
+	}
 	local _result=0
 	local _unpack_cmd
+	local _marker_name=$_marker_location/$1-unpack.marker
+	local _log_name=$_marker_location/$1-unpack.log
 
-	[[ $3 == .tar.gz || $3 == .tar.bz2 || $3 == .tar.lzma \
-	|| $3 == .tar.xz || $3 == .tar.7z || $3 == .7z ]] && {
-		[[ ! -f $4 ]] && {
+	[[ $2 == .tar.gz || $2 == .tgz || $2 == .tar.bz2 || $2 == .tar.lzma \
+	|| $2 == .tar.xz || $2 == .tar.7z || $2 == .7z ]] && {
+		[[ ! -f $_marker_name ]] && {
 			echo -n "--> unpack..."
-			case $3 in
-				.tar.gz) _unpack_cmd="tar xvf $1/$2$3 -C $1 > $5 2>&1" ;;
-				.tar.bz2) _unpack_cmd="tar xvjf $1/$2$3 -C $1 > $5 2>&1" ;;
-				.tar.lzma|.tar.xz) _unpack_cmd="tar xvJf $1/$2$3 -C $1 > $5 2>&1" ;;
-				.tar.7z) echo "unimplemented. terminate."; exit 1 ;;
-				.7z) _unpack_cmd="7za x $1/$2$3 -o$1 > $5 2>&1" ;;
-				*) echo " error. bad archive type: $3"; return 1 ;;
+			case $2 in
+				.tar.gz|.tgz) _unpack_cmd="tar xvf ${SRCS_DIR}/$1$2 -C $_src_dir > $_log_name 2>&1" ;;
+				.tar.bz2) _unpack_cmd="tar xvjf ${SRCS_DIR}/$1$2 -C $_src_dir > $_log_name 2>&1" ;;
+				.tar.lzma) _unpack_cmd="tar xvJf ${SRCS_DIR}/$1$2 -C $_src_dir > $_log_name 2>&1" ;;
+				.tar.xz) _unpack_cmd="tar -xv --xz -f ${SRCS_DIR}/$1$2 -C $_src_dir > $_log_name 2>&1" ;;
+				.tar.7z) die "unimplemented. terminate." ;;
+				.7z) _unpack_cmd="7za x -y ${SRCS_DIR}/$1$2 -o$_src_dir > $_log_name 2>&1" ;;
+				*) die " error. bad archive type: $2" ;;
 			esac
 			eval ${_unpack_cmd}
 			_result=$?
-			[[ $_result == 0 ]] && { echo " done"; touch $4; } || { echo " error!"; }
+			[[ $_result == 0 || $_ignore_error == 1 ]] && {
+				echo " done"
+				touch $_marker_name
+			} || {
+				[[ ${SHOW_LOG_ON_ERROR} == yes ]] && ${LOGVIEWER} $_log_name &
+				die " error $_result!"
+			}
 		} || {
 			echo "---> unpacked"
 		}
 	}
-	return $_result
 }
 
 # **************************************************************************
@@ -247,19 +267,25 @@ function func_execute {
 
 # apply list of patches
 function func_apply_patches {
-	# $1 - srcs dir name
-	# $2 - src dir name
-	# $3 - logs dir
-	# $4 - patches dir
-	# $5 - list
+	# $1 - src dir name
+	# $2 - patches list
+	# $3 - sources directory
+	
+	local _src_dir=${UNPACK_DIR}
+	[[ "x$3" != "x" ]] && {
+		_src_dir=$3
+	}
 	
 	local _result=0
-	_index=0
-	local -a _list=( "${!5}" )
-	[[ ${#_list[@]} == 0 ]] && return 0
+	local _index=0
+	local -a _list=( "${!2}" )
+	[[ ${#_list[@]} == 0 ]] && {
+		echo "--> No patches for $1"
+		return 0
+	}
 
 	((_index=${#_list[@]}-1))
-	[[ -f $1/$2/_patch-$_index.marker ]] && {
+	[[ -f $_src_dir/$1/_patch-$_index.marker ]] && {
 		echo "---> patched"
 		return 0
 	}
@@ -270,11 +296,11 @@ function func_apply_patches {
 	}
 
 	for it in ${_list[@]} ; do
-		local _patch_marker_name=$1/$2/_patch-$_index.marker
+		local _patch_marker_name=$_src_dir/$1/_patch-$_index.marker
 
 		[[ ! -f $_patch_marker_name ]] && {
-			[[ -f $PATCH_DIR/${it} ]] || die "Patch $PATCH_DIR/${it} not found!"
-			( cd $1/$2 && patch -p1 < $4/${it} > $1/$2/patch-$_index.log 2>&1 )
+			[[ -f ${PATCHES_DIR}/${it} ]] || die "Patch ${PATCHES_DIR}/${it} not found!"
+			( cd $_src_dir/$1 && patch -p1 < ${PATCHES_DIR}/${it} > $_src_dir/$1/patch-$_index.log 2>&1 )
 			_result=$?
 			[[ $_result == 0 ]] && {
 				touch $_patch_marker_name
@@ -286,67 +312,80 @@ function func_apply_patches {
 		((_index++))
 	done
 
-	[[ $_result == 0 ]] && echo "done" || echo "error!"
-
-	return $_result
+	[[ $_result == 0 ]] && {
+		echo "done"
+	} || {
+		[[ ${SHOW_LOG_ON_ERROR} == yes ]] && ${LOGVIEWER} $_src_dir/$1/patch-$_index.log &
+		die " error $_result!"
+	}
 }
 
 # **************************************************************************
 
 # configure
 function func_configure {
-	# $1 - name
+	# $1 - build dir name
 	# $2 - src dir name
 	# $3 - flags
-	# $4 - log file name
-	# $5 - build dir
+	# $4 - parent source directory (set if it not $UNPACK_DIR)
 
-	local _marker=$5/$1/_configure.marker
+	local _src_dir=$UNPACK_DIR/$2
+	[[ "x$4" != "x" ]] && {
+		_src_dir=$4/$2
+	}
+
+	local _marker=$CURR_BUILD_DIR/$1/${2//\//_}-configure.marker
 	local _result=0
+	local _log_name=$CURR_LOGS_DIR/${2//\//_}-configure.log
 
 	[[ ! -f $_marker ]] && {
 		echo -n "--> configure..."
-		( cd $5/$1 && eval $( func_absolute_to_relative $5/$1 $SRCS_DIR/$2 )/configure "${3}" > $4 2>&1 )
+		mkdir -p $CURR_BUILD_DIR/$1
+		( cd $CURR_BUILD_DIR/$1 && eval $( func_absolute_to_relative $CURR_BUILD_DIR/$1 $_src_dir )/configure "${3}" > $_log_name 2>&1 )
 		_result=$?
 		[[ $_result == 0 ]] && {
 			echo " done"
 			touch $_marker
-			return $_result
 		} || {
-			echo " error!"
-			return $_result
+			[[ $SHOW_LOG_ON_ERROR == yes ]] && $LOGVIEWER $_log_name &
+			die " error $_result!"
 		}
 	} || {
 		echo "---> configured"
 	}
-
-	return $_result
 }
 
 # **************************************************************************
 
 # make
 function func_make {
-	# $1 - name
-	# $2 - src dir name
-	# $3 - command line
-	# $4 - log file name
-	# $5 - text
-	# $6 - text if completed
-	# $7 - build dir
+	# $1 - build dir name
+	# $2 - make prog name
+	# $3 - make flags
+	# $4 - text
+	# $5 - text if completed
+	# $6 - index
 
-	local _marker=$7/$1/_$6.marker
+	local _marker=$CURR_BUILD_DIR/$1/$1-$5$6.marker
 	local _result=0
+	local _log_name=$CURR_LOGS_DIR/$1-$5$6.log
+	
+	local _make_cmd="$2 $3"
 
 	[[ ! -f $_marker ]] && {
-		echo -n "--> $5"
-		( cd $7/$1 && eval ${3} > $4 2>&1 )
+		echo -n "--> $4..."
+		( cd $CURR_BUILD_DIR/$1 && eval ${_make_cmd} > $_log_name 2>&1 )
 		_result=$?
-		[[ $_result == 0 ]] && { echo " done"; touch $_marker; } || { echo " error!"; }
+		[[ $_result == 0 ]] && {
+			echo " done"
+			touch $_marker
+		} || {
+			[[ $SHOW_LOG_ON_ERROR == yes ]] && $LOGVIEWER $_log_name &
+			die " error $_result!"
+		}
 	} || {
-		echo "---> $6"
+		echo "---> $5"
 	}
-	return $_result
 }
 
 # **************************************************************************

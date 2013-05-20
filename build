@@ -75,6 +75,7 @@ x64_HOST_MINGW_PATH_URL=http://sourceforge.net/projects/mingwbuilds/files\
 
 ORIGINAL_PATH=$PATH
 TOP_DIR=$(func_simplify_path "$PWD")
+PORTS_DIR=$TOP_DIR/scripts
 PATCHES_DIR=$TOP_DIR/patches
 SOURCES_DIR=$TOP_DIR/sources
 TESTS_DIR=$TOP_DIR/tests
@@ -256,7 +257,7 @@ while [[ $# > 0 ]]; do
 		--python-only=*)
 			PYTHON_ONLY_MODE=yes
 			PYTHON_VERSION=${1/--python-only=/}
-			[[ ! -f scripts/python-$PYTHON_VERSION.sh ]] && {
+			[[ ! -f $PORTS_DIR/python-$PYTHON_VERSION.sh ]] && {
 				die "bad python version. terminate."
 			}
 		;;
@@ -273,7 +274,7 @@ while [[ $# > 0 ]]; do
 			BUILD_ARCHITECTURES=( ${BUILD_ARCHITECTURES[@]} x64 )
 		;;
 		gcc-*)
-			[[ ! -f scripts/$1.sh ]] && {
+			[[ ! -f $PORTS_DIR/$1.sh ]] && {
 				die "bad gcc version. terminate."
 			} || {
 				GCC_NAME=$1
@@ -305,6 +306,7 @@ done
 }
 
 SRCS_DIR=$ROOT_DIR/src
+UNPACK_DIR=$ROOT_DIR/unpack
 MARKERS_DIR=$SRCS_DIR/MARKERS
 PREREQ_DIR=$ROOT_DIR/mingw-prereq
 RUNTIME_DIR=$ROOT_DIR/mingw-runtime
@@ -579,44 +581,20 @@ SUBTARGETS_PART2=(
 
 	for sub in ${SUBTARGETS[@]}; do
 		[[ $sub == put-versions || $sub == put-info ]] && continue
-		[[ -n $( grep 'URL=' $TOP_DIR/scripts/${sub}.sh ) ]] && {
+		[[ -n $( grep 'URL=' $PORTS_DIR/${sub}.sh ) ]] && {
 			echo -e "-> \E[32;40m$sub\E[37;40m"
-			[[ ! -f $TOP_DIR/scripts/$sub.sh ]] && {
+			[[ ! -f $PORTS_DIR/$sub.sh ]] && {
 				die "script for subtarget \"$sub\" is not exists. terminate."
 			}
 
-			NAME=""
-			cd $TOP_DIR && . ./scripts/$sub.sh
+			source $PORTS_DIR/$sub.sh
 
-			[[ -z $NAME ]] && continue
+			[[ -z $B ]] && continue
 
-			mkdir -p $SRCS_DIR/$SRC_DIR_NAME
+			#mkdir -p $SRCS_DIR/$SRC_DIR_NAME
 
-			func_download \
-				$SRCS_DIR \
-				$SRC_DIR_NAME \
-				$TYPE \
-				$URL \
-				$MARKERS_DIR/${SRC_DIR_NAME}_download.log \
-				$MARKERS_DIR/${SRC_DIR_NAME}_download.marker \
-				$( grep 'REV=' $TOP_DIR/scripts/${sub}.sh | sed 's|REV=||' )
-			func_res=$?
-			[[ $func_res != 0 ]] && {
-				[[ $SHOW_LOG_ON_ERROR == yes ]] && $LOGVIEWER $MARKERS_DIR/${SRC_DIR_NAME}_download.log &
-				die "Error $func_res"
-			}
-
-			func_uncompress \
-				$SRCS_DIR \
-				$SRC_DIR_NAME \
-				$TYPE \
-				$MARKERS_DIR/${SRC_DIR_NAME}_uncompress.marker \
-				$MARKERS_DIR/${SRC_DIR_NAME}_uncompress.log
-			func_res=$?
-			[[ $func_res != 0 ]] && {
-				[[ $SHOW_LOG_ON_ERROR == yes ]] && $LOGVIEWER $MARKERS_DIR/${SRC_DIR_NAME}_uncompress.log &
-				die "Error $func_res"
-			}
+			src_download
+			src_unpack
 		}
 	done
 }
@@ -759,18 +737,11 @@ for ARCHITECTURE in ${BUILD_ARCHITECTURES[@]}; do
 
 	for sub in ${SUBTARGETS[@]}; do
 		echo -e "-> \E[32;40m$sub\E[37;40m"
-		[[ ! -f $TOP_DIR/scripts/$sub.sh ]] && {
+		[[ ! -f $PORTS_DIR/$sub.sh ]] && {
 			die "script for subtarget \"$sub\" is not exists. terminate."
 		}
 
-		NAME=""
-		PRIORITY=""
-		EXECUTE_AFTER_DOWNLOAD=()
-		EXECUTE_AFTER_UNCOMPRESS=()
-		EXECUTE_AFTER_PATCH=()
-		EXECUTE_AFTER_INSTALL=()
-
-		cd $TOP_DIR && . ./scripts/$sub.sh
+		source $PORTS_DIR/$sub.sh
 	
 		[[ $sub == "gcc-post" ]] && {
 			echo -n "--> Switching to new compiler..."
@@ -778,7 +749,7 @@ for ARCHITECTURE in ${BUILD_ARCHITECTURES[@]}; do
 			echo "done"
 		}
 
-		[[ -z $NAME ]] && continue
+		[[ -z $B ]] && continue
 
 		case $PRIORITY in
 			prereq | runtime)
@@ -795,164 +766,24 @@ for ARCHITECTURE in ${BUILD_ARCHITECTURES[@]}; do
 			;;
 		esac
 		
-		DOWNLOAD_LOG=$MARKERS_DIR/${SRC_DIR_NAME}_download.log
-		DOWNLOAD_MARKER=$MARKERS_DIR/${SRC_DIR_NAME}_download.marker
-		UNCOMPRESS_LOG=$MARKERS_DIR/${SRC_DIR_NAME}_uncompress.log
-		UNCOMPRESS_MARKER=$MARKERS_DIR/${SRC_DIR_NAME}_uncompress.marker
-		CONFIGURE_LOG=$CURR_LOGS_DIR/$NAME/configure.log
-		MAKE_LOG=$CURR_LOGS_DIR/$NAME/make.log
-		INSTALL_LOG=$CURR_LOGS_DIR/$NAME/install.log
+		DOWNLOAD_LOG=$MARKERS_DIR/${P_V}_download.log
+		DOWNLOAD_MARKER=$MARKERS_DIR/${P_V}_download.marker
+		UNCOMPRESS_LOG=$MARKERS_DIR/${P_V}_uncompress.log
+		UNCOMPRESS_MARKER=$MARKERS_DIR/${P_V}_uncompress.marker
+		CONFIGURE_LOG=$CURR_LOGS_DIR/$B/configure.log
+		MAKE_LOG=$CURR_LOGS_DIR/$B/make.log
+		INSTALL_LOG=$CURR_LOGS_DIR/$B/install.log
 
-		mkdir -p $SRCS_DIR/$SRC_DIR_NAME
-		mkdir -p {$CURR_LOGS_DIR/,$CURR_BUILD_DIR/}$NAME
+		#mkdir -p $UNPACK_DIR/$B
+		mkdir -p {$CURR_LOGS_DIR/,$CURR_BUILD_DIR/}$B
 		#[[ $NAME != $SRC_DIR_NAME ]] && mkdir -p {$BUILDS_DIR/,$LOGS_DIR/}$NAME
 
-		func_download \
-			$SRCS_DIR \
-			$SRC_DIR_NAME \
-			$TYPE \
-			$URL \
-			$DOWNLOAD_LOG \
-			$DOWNLOAD_MARKER \
-			$( grep 'REV=' $TOP_DIR/scripts/${sub}.sh | sed 's|REV=||' )
-		func_res=$?
-		[[ $func_res != 0 ]] && {
-			[[ $SHOW_LOG_ON_ERROR == yes ]] && $LOGVIEWER $DOWNLOAD_LOG &
-			exit $func_res
-		}
-
-		func_uncompress \
-			$SRCS_DIR \
-			$SRC_DIR_NAME \
-			$TYPE \
-			$UNCOMPRESS_MARKER \
-			$UNCOMPRESS_LOG
-		func_res=$?
-		[[ $func_res != 0 ]] && {
-			[[ $SHOW_LOG_ON_ERROR == yes ]] && $LOGVIEWER $UNCOMPRESS_LOG &
-			exit $func_res
-		}
-
-		[[ ${#EXECUTE_AFTER_UNCOMPRESS[@]} >0 ]] && {
-			func_execute \
-				$SRCS_DIR \
-				$SRC_DIR_NAME \
-				"execute commands..." \
-				"after_unpack" \
-				$CURR_LOGS_DIR \
-				EXECUTE_AFTER_UNCOMPRESS[@]
-			func_res=$?
-			[[ $func_res != 0 ]] && {
-				[[ $SHOW_LOG_ON_ERROR == yes ]] && $LOGVIEWER $SRCS_DIR/$SRC_DIR_NAME/exec-after_unpack-$_index.log &
-				exit $func_res
-			}
-		}
-
-		func_apply_patches \
-			$SRCS_DIR \
-			$SRC_DIR_NAME \
-			$CURR_LOGS_DIR \
-			$PATCHES_DIR \
-			PATCHES[@]
-		func_res=$?
-		[[ $func_res != 0 ]] && {
-			[[ $SHOW_LOG_ON_ERROR == yes ]] && $LOGVIEWER $SRCS_DIR/$SRC_DIR_NAME/patch-$_index.log &
-			exit $func_res
-		}
-
-		[[ ${#EXECUTE_AFTER_PATCH[@]} >0 ]] && {
-			func_execute \
-				$SRCS_DIR \
-				$SRC_DIR_NAME \
-				"execute commands..." \
-				"after_patch" \
-				$CURR_LOGS_DIR \
-				EXECUTE_AFTER_PATCH[@]
-			func_res=$?
-			[[ $func_res != 0 ]] && {
-				[[ $SHOW_LOG_ON_ERROR == yes ]] && $LOGVIEWER $SRCS_DIR/$SRC_DIR_NAME/exec-after_patch-$_index.log &
-				exit $func_res
-			}
-		}
-
-		[[ ${#CONFIGURE_FLAGS[@]} >0 ]] && {
-			configure_flags="${CONFIGURE_FLAGS[@]}"
-			func_configure \
-				$NAME \
-				$SRC_DIR_NAME \
-				"$configure_flags" \
-				$CONFIGURE_LOG \
-				$CURR_BUILD_DIR
-			func_res=$?
-			[[ $func_res != 0 ]] && {
-				[[ $SHOW_LOG_ON_ERROR == yes ]] && $LOGVIEWER $CONFIGURE_LOG &
-				exit $func_res
-			}
-		}
-
-		[[ ${#EXECUTE_BEFORE_MAKE[@]} >0 ]] && {
-			func_execute \
-				$CURR_BUILD_DIR \
-				$SRC_DIR_NAME \
-				"execute commands..." \
-				"before_make" \
-				$CURR_LOGS_DIR \
-				EXECUTE_BEFORE_MAKE[@]
-			func_res=$?
-			[[ $func_res != 0 ]] && {
-				[[ $SHOW_LOG_ON_ERROR == yes ]] && $LOGVIEWER $CURR_BUILD_DIR/$SRC_DIR_NAME/exec-before_make-$_index.log &
-				exit $func_res
-			}
-		}
-
-		[[ ${#MAKE_FLAGS[@]} >0 ]] && {
-			make_flags="/bin/make ${MAKE_FLAGS[@]}"
-			func_make \
-				$NAME \
-				$SRC_DIR_NAME \
-				"$make_flags" \
-				$MAKE_LOG \
-				"building..." \
-				"built" \
-				$CURR_BUILD_DIR
-			func_res=$?
-			[[ $func_res != 0 ]] && {
-				[[ $SHOW_LOG_ON_ERROR == yes ]] && $LOGVIEWER $MAKE_LOG &
-				exit $func_res
-			}
-		}
-
-		[[ ${#INSTALL_FLAGS[@]} >0 ]] && {
-			install_flags="/bin/make ${INSTALL_FLAGS[@]}"
-			func_make \
-				$NAME \
-				$SRC_DIR_NAME \
-				"$install_flags" \
-				$INSTALL_LOG \
-				"installing..." \
-				"installed" \
-				$CURR_BUILD_DIR
-			func_res=$?
-			[[ $func_res != 0 ]] && {
-				[[ $SHOW_LOG_ON_ERROR == yes ]] && $LOGVIEWER $INSTALL_LOG &
-				exit $func_res
-			}
-		}
-		
-		[[ ${#EXECUTE_AFTER_INSTALL[@]} >0 ]] && {
-			func_execute \
-				$SRCS_DIR \
-				$SRC_DIR_NAME \
-				"execute commands..." \
-				"after_install" \
-				$CURR_LOGS_DIR \
-				EXECUTE_AFTER_INSTALL[@]
-			func_res=$?
-			[[ $func_res != 0 ]] && {
-				[[ $SHOW_LOG_ON_ERROR == yes ]] && $LOGVIEWER $SRCS_DIR/$SRC_DIR_NAME/exec-after_install-$_index.log &
-				exit $func_res
-			}
-		}
+		src_download
+		src_unpack
+		src_patch
+		src_configure
+		pkg_build
+		pkg_install
    done
 done
 
@@ -960,7 +791,7 @@ done
 
 [[ $COMPRESSING_SRCS == yes ]] && {
 	echo -e "-> \E[32;40mcompress mingw sources\E[37;40m"
-	cd $TOP_DIR && . ./scripts/srcs-compress.sh
+	sh $PORTS_DIR/srcs-compress.sh
 }
 
 # ***************************************************************************
@@ -968,7 +799,7 @@ done
 func_download_repository_file "$HOME/repository.txt"
 
 [[ $UPLOAD_BIN_TO_SF == yes ]] && {
-	cd $TOP_DIR; . ./scripts/upload.sh
+	sh $PORTS_DIR/upload.sh
 	[[ -z $SF_USER ]] && {
 		echo "user name is not specified. terminate."
 		exit 0
@@ -1013,7 +844,7 @@ func_download_repository_file "$HOME/repository.txt"
 }
 
 [[ $UPLOAD_SRC_TO_SF == yes ]] && {
-	cd $TOP_DIR; . ./scripts/upload.sh
+	sh $PORTS_DIR/upload.sh
 	[[ -z $SF_USER ]] && {
 		echo "user name is not specified. terminate."
 		exit 0
