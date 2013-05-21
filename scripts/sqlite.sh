@@ -41,7 +41,7 @@ TYPE=".tar.gz"
 P_V=${P}-autoconf-${V}
 SRC_FILE="${P_V}${TYPE}"
 B=${P_V}
-URL=http://ftp.gnu.org/pub/gnu/${P}/${SRC_FILE}
+URL=http://www.sqlite.org/2013/${SRC_FILE}
 PRIORITY=extra
 
 src_download() {
