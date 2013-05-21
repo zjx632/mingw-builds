@@ -66,7 +66,7 @@ src_patch() {
 		"autoreconf -fi"
 	)
 	local _allcommands="${_commands[@]}"
-	func_execute ${SRCS_DIR}/${P_V} "Autoreconf" "$_allcommands"
+	func_execute ${UNPACK_DIR}/${P_V} "Autoreconf" "$_allcommands"
 }
 
 src_configure() {
