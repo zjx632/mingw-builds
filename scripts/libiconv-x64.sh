@@ -69,6 +69,10 @@ restore_paths() {
 			BUILD=$OLD_BUILD
 			TARGET=$OLD_TARGET
 		}
+		unset BEFORE_LIBICONV64_PRE_PATH
+		unset OLD_HOST
+		unset OLD_BUILD
+		unset OLD_TARGET
 	}
 }
 
