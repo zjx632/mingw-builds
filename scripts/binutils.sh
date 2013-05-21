@@ -145,10 +145,10 @@ pkg_install() {
 		_binutilsprefix=${_binutilsprefix}-nomulti
 	}
 
-	if [ ! -f $CURR_BUILD_DIR/binutils-post.marker ]
+	if [ ! -f $BUILDS_DIR/binutils-post.marker ]
 	then
-		cp -rf $BINUTILSPREFIX/* $PREFIX || die "Cannot copy $BINUTILSPREFIX/* to $PREFIX"
-		touch $CURR_BUILD_DIR/binutils-post.marker
+		cp -rf $_binutilsprefix/* $PREFIX || die "Cannot copy $_binutilsprefix/* to $PREFIX"
+		touch $BUILDS_DIR/binutils-post.marker
 	fi
 }
 
