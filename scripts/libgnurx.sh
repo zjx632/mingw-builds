@@ -49,7 +49,7 @@ src_download() {
 }
 
 src_unpack() {
-	func_uncompress ${P_V} ${TYPE}
+	func_uncompress ${P_V}-src ${TYPE}
 }
 
 src_patch() {
