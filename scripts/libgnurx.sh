@@ -41,7 +41,7 @@ TYPE=".tar.gz"
 P_V=${P}-${V}
 SRC_FILE="${P_V}-src${TYPE}"
 B=${P}-${V}
-URL=https://sourceforge.net/projects/mingw/files/Other/UserContributed/regex/mingw-regex-${V}/${P_V}
+URL=https://sourceforge.net/projects/mingw/files/Other/UserContributed/regex/mingw-regex-${V}/${SRC_FILE}
 PRIORITY=extra
 
 src_download() {
