@@ -337,7 +337,7 @@ function func_configure {
 
 	local _marker=$CURR_BUILD_DIR/$1/${2//\//_}-configure.marker
 	local _result=0
-	local _log_name=$CURR_LOGS_DIR/${2//\//_}-configure.log
+	local _log_name=$CURR_LOGS_DIR/$1/${2//\//_}-configure.log
 
 	[[ ! -f $_marker ]] && {
 		echo -n "--> configure..."
@@ -369,7 +369,7 @@ function func_make {
 
 	local _marker=$CURR_BUILD_DIR/$1/$1-$5$6.marker
 	local _result=0
-	local _log_name=$CURR_LOGS_DIR/$1-$5$6.log
+	local _log_name=$CURR_LOGS_DIR/$1/$1-$5$6.log
 	
 	local _make_cmd="$2 $3"
 
