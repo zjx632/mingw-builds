@@ -262,7 +262,7 @@ function func_execute {
 		((_index++))
 	done
 
-	[[ $_index == ${#_commands[@]} ]] && echo "done"
+	[[ $_index == ${#_commands[@]} ]] && echo " done"
 
 	return $_result
 }
@@ -314,7 +314,7 @@ function func_apply_patches {
 	done
 
 	[[ $_result == 0 ]] && {
-		echo "done"
+		echo " done"
 	} || {
 		[[ ${SHOW_LOG_ON_ERROR} == yes ]] && ${LOGVIEWER} $_src_dir/$1/patch-$_index.log &
 		die " error $_result!"
