@@ -77,9 +77,10 @@ src_patch() {
 		${P_V} \
 		_patches[@]
 
-	if [ ! -d $PREREQ_BUILD_DIR/${ZLIB_ARCH}-${P_V} ]
+	if ! [ -f $PREREQ_BUILD_DIR/${B}/copy.marker ]
 	then
-		cp -rf $UNPACK_DIR/${P_V} $PREREQ_BUILD_DIR/${ZLIB_ARCH}-${P_V} || die "Cannot copy $UNPACK_DIR/${P_V} to $PREREQ_BUILD_DIR/${ZLIB_ARCH}-${P_V}"
+		cp -rf $UNPACK_DIR/${P_V}/* $PREREQ_BUILD_DIR/${B}/ || die "Cannot copy $UNPACK_DIR/${P_V}/* to $PREREQ_BUILD_DIR/${B}/"
+		touch $PREREQ_BUILD_DIR/${B}/copy.marker
 	fi
 }
 
