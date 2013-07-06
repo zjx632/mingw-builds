@@ -176,7 +176,7 @@ pkg_build() {
 
 pkg_install() {
 	local _install_flags=(
-		-j${JOBS}
+		-j1
 		install
 	)
 	local _allinstall="${_install_flags[@]}"
