@@ -57,6 +57,8 @@ src_patch() {
 		${P}/gcc-4.7-stdthreads.patch
 		${P}/gcc-4.8-iconv.patch
 		${P}/gcc-4.8-libstdc++export.patch
+		${P}/pr-56742.patch
+		${P}/gcc-4.8.1-objc-exceptions.patch
 	)
 	
 	func_apply_patches \

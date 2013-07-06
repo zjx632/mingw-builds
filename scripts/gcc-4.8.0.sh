@@ -59,6 +59,8 @@ src_patch() {
 		${P}/gcc-4.8-intrin.patch
 		${P}/gcc-4.8-libstdc++export.patch
 		${P}/gcc-4.8.0-cannot_modify_jumps.patch
+		${P}/pr-56742.patch
+		${P}/gcc-4.8.1-objc-exceptions.patch
 	)
 	
 	func_apply_patches \
