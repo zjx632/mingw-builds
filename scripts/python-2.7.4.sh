@@ -129,7 +129,7 @@ src_configure() {
 		popd > /dev/null
 	}
 
-	local LIBFFI_VERSION=$( grep 'V=' $PORTS_DIR/libffi.sh | sed 's|V=||' )
+	local LIBFFI_VERSION=$( grep -m 1 'V=' $PORTS_DIR/libffi.sh | sed 's|V=||' )
 	local MY_CPPFLAGS="-I$LIBSW_DIR/include -I$LIBSW_DIR/include/ncurses -I$PREREQW_DIR/$ARCHITECTURE-zlib/include -I$PREFIXW/opt/include"
 
 	# Workaround for conftest error on 64-bit builds
