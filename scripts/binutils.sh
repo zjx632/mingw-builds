@@ -59,6 +59,7 @@ src_unpack() {
 
 src_patch() {
 	local _patches=(
+		${P}/binutils-2.23.2-fix-docs.patch
 	)
 	
 	func_apply_patches \

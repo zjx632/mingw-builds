@@ -65,7 +65,7 @@ src_patch() {
 		_patches[@]
 	
 	local _commands=(
-		"autogen.sh"
+		"./autogen.sh"
 	)
 	local _allcommands="${_commands[@]}"
 	func_execute ${UNPACK_DIR}/${P_V} "Autogen" "$_allcommands"

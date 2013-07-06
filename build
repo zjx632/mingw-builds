@@ -34,6 +34,8 @@
 #
 
 # **************************************************************************
+export MSYSTEM=MINGW32
+export LC_ALL=en_US.UTF-8
 
 . ./scripts/functions.sh
 
@@ -64,7 +66,7 @@ JOBS=1
 
 # **************************************************************************
 
-MINGW_BUILDS_VERSION="MinGW-builds-2.0.1"
+MINGW_BUILDS_VERSION="MinGW-builds-3.0.0"
 PKG_VERSION="Built by MinGW-builds project"
 BUG_URL=http://sourceforge.net/projects/mingwbuilds/
 
@@ -383,8 +385,8 @@ mkdir -p $SRCS_DIR $UNPACK_DIR $MARKERS_DIR $ARCHIVES_DIR $PREREQ_DIR $RUNTIME_D
 	}
 }
 
-[[ $[ $COMPRESSING_MINGW == yes || $COMPRESSING_SRCS == yes ] == 1 && ! -f /bin/7za.exe ]] && {
-	die "7za.exe is not found in your /bin directory. terminate."
+[[ $[ $COMPRESSING_MINGW == yes || $COMPRESSING_SRCS == yes ] == 1 ]] && {
+	check_program "7za"
 }
 
 [[ $PYTHON_ONLY_MODE == yes && $COMPRESSING_SRCS == yes ]] && {
@@ -653,7 +655,7 @@ for ARCHITECTURE in ${BUILD_ARCHITECTURES[@]}; do
 		[[ ! -f $x32_HOST_MINGW_PATH/bin/gcc.exe ]] && {
 			die "gcc.exe is not exists in the \"$x32_HOST_MINGW_PATH/bin\" directory. terminate."
 		}
-		export PATH=$LIBS_DIR/bin:$PREREQ_DIR/$HOST-$LINK_TYPE_SUFFIX/bin:$PREFIX/opt/bin:$x32_HOST_MINGW_PATH/bin:$PREFIX/bin:$ORIGINAL_PATH
+		export PATH=$LIBS_DIR/bin:$PREREQ_DIR/$HOST-$LINK_TYPE_SUFFIX/bin:$x32_HOST_MINGW_PATH/bin:$ORIGINAL_PATH
 	} || {
 		HOST=x86_64-w64-mingw32
 		BUILD=x86_64-w64-mingw32
@@ -673,7 +675,7 @@ for ARCHITECTURE in ${BUILD_ARCHITECTURES[@]}; do
 		[[ ! -f $x64_HOST_MINGW_PATH/bin/gcc.exe ]] && {
 			die "gcc.exe is not exists in the \"$x64_HOST_MINGW_PATH/bin\" directory. terminate."
 		}
-		export PATH=$LIBS_DIR/bin:$PREREQ_DIR/$HOST-$LINK_TYPE_SUFFIX/bin:$PREFIX/opt/bin:$x64_HOST_MINGW_PATH/bin:$PREFIX/bin:$ORIGINAL_PATH
+		export PATH=$LIBS_DIR/bin:$PREREQ_DIR/$HOST-$LINK_TYPE_SUFFIX/bin:$x64_HOST_MINGW_PATH/bin:$ORIGINAL_PATH
 	}
 
 	mkdir -p $BASE_BUILD_DIR $BUILDS_DIR $LIBS_DIR $LOGS_DIR $PREFIX $PREREQ_BUILD_DIR $PREREQ_LOGS_DIR
