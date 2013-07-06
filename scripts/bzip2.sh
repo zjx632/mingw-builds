@@ -77,7 +77,7 @@ src_configure() {
 		--build=${BUILD}
 		--target=${TARGET}
 		#
-		--prefix=${PREFIX}
+		--prefix=${LIBS_DIR}
 		#
 		${GCC_DEPS_LINK_TYPE}
 		#
