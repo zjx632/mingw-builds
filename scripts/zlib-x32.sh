@@ -89,6 +89,7 @@ src_configure() {
 }
 
 pkg_build() {
+	change_paths
 	local _make_flags=(
 		-f win32/Makefile.gcc
 		CC=i686-w64-mingw32-gcc
@@ -105,6 +106,7 @@ pkg_build() {
 		"$_allmake" \
 		"building..." \
 		"built"
+	restore_paths
 }
 
 pkg_install() {
