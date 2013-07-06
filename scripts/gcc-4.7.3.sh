@@ -128,7 +128,7 @@ src_configure() {
 		CFLAGS="\"$COMMON_CFLAGS\""
 		CXXFLAGS="\"$COMMON_CXXFLAGS\""
 		CPPFLAGS="\"$COMMON_CPPFLAGS\""
-		LDFLAGS="\"$COMMON_LDFLAGS\""
+		LDFLAGS="\"${COMMON_LDFLAGS} $( [[ ${ARCHITECTURE} == x32 ]] && echo -Wl,--large-address-aware )\""
 	)
 	local _allconf="${_conf_flags[@]}"
 	func_configure ${B} ${P_V} "$_allconf"
@@ -136,7 +136,7 @@ src_configure() {
 
 pkg_build() {
 	local _make_flags=(
-		-j1
+		-j${JOBS}
 		all
 	)
 	local _allmake="${_make_flags[@]}"
@@ -150,7 +150,7 @@ pkg_build() {
 
 pkg_install() {
 	local _install_flags=(
-		-j${JOBS}
+		-j1
 		DESTDIR=$BASE_BUILD_DIR
 		$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
 	)

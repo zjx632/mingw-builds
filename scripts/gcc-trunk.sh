@@ -137,7 +137,7 @@ src_configure() {
 
 pkg_build() {
 	local _make_flags=(
-		-j1
+		-j${JOBS}
 		all
 	)
 	local _allmake="${_make_flags[@]}"

@@ -137,7 +137,7 @@ src_configure() {
 
 pkg_build() {
 	local _make_flags=(
-		-j1
+		-j${JOBS}
 		all
 	)
 	local _allmake="${_make_flags[@]}"
@@ -151,7 +151,7 @@ pkg_build() {
 
 pkg_install() {
 	local _install_flags=(
-		-j${JOBS}
+		-j1
 		DESTDIR=$BASE_BUILD_DIR
 		$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
 	)
