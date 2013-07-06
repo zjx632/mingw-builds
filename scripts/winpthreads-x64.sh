@@ -41,7 +41,7 @@ TYPE="svn"
 P_V=${P}
 SRC_FILE=
 B=${P_V}-x64
-URL=http://mingw-w64.svn.sourceforge.net/svnroot/mingw-w64/trunk/mingw-w64-libraries/${P}
+URL=svn://svn.code.sf.net/p/mingw-w64/code/trunk/mingw-w64-libraries/${P}
 PRIORITY=runtime
 REV=
 
