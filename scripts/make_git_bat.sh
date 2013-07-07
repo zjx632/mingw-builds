@@ -64,12 +64,16 @@ src_patch() {
 }
 
 src_configure() {
-	cp -rf ${UNPACK_DIR}/${P_V} ${CURR_BUILD_DIR}/
+	if ! [ -f $CURR_BUILD_DIR/${P_V}.marker ]
+	then
+		cp -rf ${UNPACK_DIR}/${P_V} ${CURR_BUILD_DIR}/
+		touch $CURR_BUILD_DIR/${P_V}.marker
+	fi
 }
 
 pkg_build() {
 	local _make_flags=(
-		"build_w32.bat gcc"
+		"'build_w32.bat gcc'"
 	)
 	local _allmake="${_make_flags[@]}"
 	func_make \
