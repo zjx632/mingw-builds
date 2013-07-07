@@ -109,6 +109,8 @@ RUN_ARGS="$@"
 	echo "                              available: win32, posix"
 	echo "    --python-only=<version> - only Python building mode"
 	echo "                              available versions: 2.7.3, 2.7.4, 2.7.5, 3.3.0"
+	echo "    --llvm-only=<version>   - build llvm compiler only"
+	echo "                              available versions: 3.3, git"
 	echo "    --version               - pring the version of the MinGW-builds scripts"
 	echo "    --mingw-compress        - compressing MinGW"
 	echo "    --srcs-compress         - compressing sources"
@@ -182,6 +184,8 @@ SF_USER=""
 DEBUG_UPLOAD=no
 PYTHON_ONLY_MODE=no
 PYTHON_VERSION="2.7.5"
+LLVM_ONLY_MODE=no
+LLVM_VERSION="3.3"
 
 PROCESSOR_OPTIMIZATION_TUNE_32='generic'
 PROCESSOR_OPTIMIZATION_ARCH_32='i686'
@@ -269,6 +273,13 @@ while [[ $# > 0 ]]; do
 				die "bad python version. terminate."
 			}
 		;;
+		--llvm-only=*)
+			LLVM_ONLY_MODE=yes
+			LLVM_VERSION=${1/--llvm-only=/}
+			[[ ! -f $PORTS_DIR/llvm-$LLVM_VERSION.sh ]] && {
+				die "bad llvm version. terminate."
+			}
+		;;
 		--rev=*)
 			REV_NUM=${1/--rev=/}
 			PKG_VERSION="rev$REV_NUM, $PKG_VERSION"
@@ -345,7 +356,7 @@ mkdir -p $SRCS_DIR $UNPACK_DIR $MARKERS_DIR $ARCHIVES_DIR $PREREQ_DIR $RUNTIME_D
 	build_for_both=0
 }
 
-[[ $PYTHON_ONLY_MODE == no ]] && {
+[[ $PYTHON_ONLY_MODE == no && $LLVM_ONLY_MODE == no ]] && {
 	[[ -z $GCC_NAME ]] && {
 		die "please specify GCC version. terminate."
 	}
@@ -506,7 +517,11 @@ SUBTARGETS_PART2=(
 	$([[ $COMPRESSING_MINGW == yes ]] && echo "mingw-compress")
 )
 
-[[ $PYTHON_ONLY_MODE == no ]] && {
+LLVM_SUBTARGETS=(
+	llvm-$LLVM_VERSION
+)
+
+[[ $PYTHON_ONLY_MODE == no && $LLVM_ONLY_MODE == no ]] && {
 	[[ $USE_MULTILIB == yes || $build_for_both == 1 ]] && {
 		SUBTARGETS=(
 			${LIBICONV_X32_SUBTARGETS[@]}
@@ -538,7 +553,11 @@ SUBTARGETS_PART2=(
 		}
 	}
 } || {
-	SUBTARGETS=( ${PYTHON_SUBTARGETS[@]} )
+	[[ $PYTHON_ONLY_MODE == yes ]] && {
+		SUBTARGETS=( ${PYTHON_SUBTARGETS[@]} )
+	} || {
+		SUBTARGETS=( ${LLVM_SUBTARGETS[@]} )
+	}
 }
 
 # **************************************************************************
@@ -552,15 +571,19 @@ SUBTARGETS_PART2=(
 		}
 	} || {
 		[[ $DOWNLOAD_MODE == yes ]] && {
-			[[ $PYTHON_ONLY_MODE == no ]] && {
+			[[ $PYTHON_ONLY_MODE == no && $LLVM_ONLY_MODE == no ]] && {
 				echo -n "-> download sources for MinGW-${GCC_NAME}-"
 			} || {
-				echo -n "-> download sources for python-${PYTHON_VERSION}-"
+				[[ $PYTHON_ONLY_MODE == yes ]] && {
+					echo -n "-> download sources for python-${PYTHON_VERSION}-"
+				} || {
+					echo -n "-> download sources for llvm-${LLVM_VERSION}-"
+				}
 			}
 		}
 	}
 	
-	[[ $PYTHON_ONLY_MODE == no ]] && {
+	[[ $PYTHON_ONLY_MODE == no && $LLVM_ONLY_MODE == no ]] && {
 		[[ $USE_MULTILIB == yes && $EXCEPTIONS_MODEL == sjlj ]] && echo -n "multilib-"
 		[[ $build_for_both == 1 ]] && {
 			echo -n "x32/x64-"
@@ -612,28 +635,34 @@ for ARCHITECTURE in ${BUILD_ARCHITECTURES[@]}; do
 	GCC_TYPE_STRING=$(func_map_gcc_name_to_gcc_type $GCC_NAME)
 	PREREQ_BUILD_DIR=$ROOT_DIR/prereq-build
 	PREREQ_LOGS_DIR=$ROOT_DIR/prereq-logs
-	[[ $PYTHON_ONLY_MODE == no ]] && {
+	[[ $PYTHON_ONLY_MODE == no && $LLVM_ONLY_MODE == no ]] && {
 		BASE_BUILD_DIR=$ROOT_DIR/$ARCHITECTURE-$GCC_PART_NAME-$THREADS_MODEL-$EXCEPTIONS_MODEL${REV_STRING}
+		PREFIX=$BASE_BUILD_DIR/mingw${ARCHITECTURE/x/}
 	} || {
-		BASE_BUILD_DIR=$ROOT_DIR/python-$PYTHON_VERSION-$ARCHITECTURE$REV_STRING
+		[[ $PYTHON_ONLY_MODE == yes ]] && {
+			BASE_BUILD_DIR=$ROOT_DIR/python-$PYTHON_VERSION-$ARCHITECTURE$REV_STRING
+			PREFIX=$BASE_BUILD_DIR/python-${PYTHON_VERSION}-${ARCHITECTURE}
+		} || {
+			BASE_BUILD_DIR=$ROOT_DIR/llvm-$LLVM_VERSION-$ARCHITECTURE$REV_STRING
+			PREFIX=$BASE_BUILD_DIR/llvm-${LLVM_VERSION}-${ARCHITECTURE}
+		}
 	}
 	BUILDS_DIR=$BASE_BUILD_DIR/build
 	LIBS_DIR=$BASE_BUILD_DIR/libs
 	LOGS_DIR=$BASE_BUILD_DIR/logs
-	[[ $PYTHON_ONLY_MODE == no ]] && {
-		PREFIX=$BASE_BUILD_DIR/mingw${ARCHITECTURE/x/}
-	} || {
-		PREFIX=$BASE_BUILD_DIR/python-${PYTHON_VERSION}-${ARCHITECTURE}
-	}
-	MINGWPREFIX=/mingw${ARCHITECTURE/x/}
 
-	[[ $PYTHON_ONLY_MODE == no ]] && {
+	[[ $PYTHON_ONLY_MODE == no && $LLVM_ONLY_MODE == no ]] && {
+		MINGWPREFIX=/mingw${ARCHITECTURE/x/}
 		MINGW_BUILD_NAME=$ARCHITECTURE-${GCC_NAME/gcc-/}
 		MINGW_BUILD_NAME=$MINGW_BUILD_NAME$([[ $USE_MULTILIB == yes ]] && echo -n -multilib)-$THREADS_MODEL-$EXCEPTIONS_MODEL
 		MINGW_BUILD_NAME=$MINGW_BUILD_NAME$([[ -n $REV_NUM ]] && echo -n -rev$REV_NUM)
 		echo "-> start building $MINGW_BUILD_NAME"
 	} || {
-		echo "-> start building python-${PYTHON_VERSION}-${ARCHITECTURE}"
+		[[ $PYTHON_ONLY_MODE == yes ]] && {
+			echo "-> start building python-${PYTHON_VERSION}-${ARCHITECTURE}"
+		} || {
+			echo "-> start building llvm-${LLVM_VERSION}-${ARCHITECTURE}"
+		}
 	}
 
 	[[ $ARCHITECTURE == x32 ]] && {
@@ -685,7 +714,7 @@ for ARCHITECTURE in ${BUILD_ARCHITECTURES[@]}; do
 	COMMON_CPPFLAGS="$BASE_CPPFLAGS"
 	COMMON_LDFLAGS="$BASE_LDFLAGS -L$LIBS_DIR/lib -L$PREREQ_DIR/$ARCHITECTURE-zlib/lib -L$PREREQ_DIR/$HOST-$LINK_TYPE_SUFFIX/lib -L$PREFIX/opt/lib"
 
-	[[ $PYTHON_ONLY_MODE == no ]] && {
+	[[ $PYTHON_ONLY_MODE == no && $LLVM_ONLY_MODE == no ]] && {
 		[[ $USE_MULTILIB == yes ]] && {
 			SUBTARGETS=(
 				${LIBICONV_X32_SUBTARGETS[@]}
@@ -723,14 +752,25 @@ for ARCHITECTURE in ${BUILD_ARCHITECTURES[@]}; do
 			}
 		}
 	} || {
-		SUBTARGETS=(
-			${PYTHON_SUBTARGETS[@]}
-			cleanup
-			licenses
-			put-versions
-			put-info
-			$([[ $COMPRESSING_MINGW == yes ]] && echo mingw-compress)
-		)
+		[[ $PYTHON_ONLY_MODE == yes ]] && {
+			SUBTARGETS=(
+				${PYTHON_SUBTARGETS[@]}
+				cleanup
+				licenses
+				put-versions
+				put-info
+				$([[ $COMPRESSING_MINGW == yes ]] && echo mingw-compress)
+			)
+		} || {
+			SUBTARGETS=(
+				${LLVM_SUBTARGETS[@]}
+				cleanup
+				licenses
+				put-versions
+				put-info
+				$([[ $COMPRESSING_MINGW == yes ]] && echo mingw-compress)
+			)
+		}
 	}
 
 	for sub in ${SUBTARGETS[@]}; do
