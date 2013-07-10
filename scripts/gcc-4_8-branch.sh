@@ -58,7 +58,6 @@ src_patch() {
 	local _patches=(
 		${P}/gcc-4.7-stdthreads.patch
 		${P}/gcc-4.8-iconv.patch
-		${P}/gcc-4.8-intrin.patch
 		${P}/gcc-4.8-libstdc++export.patch
 	)
 	
