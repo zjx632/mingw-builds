@@ -35,28 +35,23 @@
 
 # **************************************************************************
 
-VERSION=1.0.1
-NAME=$ARCHITECTURE-mpc-${VERSION}-$LINK_TYPE_SUFFIX
-SRC_DIR_NAME=mpc-${VERSION}
-URL=http://www.multiprecision.org/mpc/download/mpc-${VERSION}.tar.gz
-TYPE=.tar.gz
-PRIORITY=prereq
-
 P=mpc
 V=1.0.1
 TYPE=".tar.gz"
 P_V=${P}-${V}
 SRC_FILE="${P_V}${TYPE}"
 B=$ARCHITECTURE-${P_V}-$LINK_TYPE_SUFFIX
-URL=http://www.multiprecision.org/mpc/download/${SRC_FILE}
+URL=(
+	"http://www.multiprecision.org/mpc/download/${SRC_FILE}"
+)
 PRIORITY=prereq
 
 src_download() {
-	func_download ${P_V} ${TYPE} ${URL}
+	func_download URL[@]
 }
 
 src_unpack() {
-	func_uncompress ${P_V} ${TYPE}
+	func_uncompress URL[@]
 }
 
 src_patch() {

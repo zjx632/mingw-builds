@@ -38,6 +38,7 @@
 P=mingw-w64-crt
 V=
 TYPE="svn"
+REV=
 P_V=${P}
 SRC_FILE=
 [[ $USE_MULTILIB == yes ]] && {
@@ -45,12 +46,13 @@ SRC_FILE=
 } || {
 	B=$ARCHITECTURE-${P}-nomulti
 }
-URL=svn://svn.code.sf.net/p/mingw-w64/code/trunk/${P}
+URL=(
+	"svn://svn.code.sf.net/p/mingw-w64/code/trunk/${P}|repo:$TYPE"
+)
 PRIORITY=runtime
-REV=
 
 src_download() {
-	func_download ${P_V} ${TYPE} ${URL}
+	func_download URL[@]
 }
 
 src_unpack() {

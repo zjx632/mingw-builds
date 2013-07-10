@@ -41,11 +41,13 @@ TYPE="git"
 P_V=${P}_${V}
 SRC_FILE=
 B=${P_V}
-URL="http://git.savannah.gnu.org/cgit/make.git"
+URL=(
+	"http://git.savannah.gnu.org/cgit/make.git|repo:$TYPE|module:${P_V}"
+)
 PRIORITY=extra
 
 src_download() {
-	func_download ${P_V} ${TYPE} ${URL}
+	func_download URL[@]
 }
 
 src_unpack() {

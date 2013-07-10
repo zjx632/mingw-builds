@@ -41,15 +41,17 @@ TYPE=".tar.bz2"
 P_V=${P}-${V}
 SRC_FILE="${P_V}${TYPE}"
 B=${P_V}
-URL=http://www.python.org/ftp/python/${V}/${SRC_FILE}
+URL=(
+	"http://www.python.org/ftp/python/${V}/${SRC_FILE}"
+)
 PRIORITY=extra
 
 src_download() {
-	func_download ${P_V} ${TYPE} ${URL}
+	func_download URL[@]
 }
 
 src_unpack() {
-	func_uncompress ${P_V} ${TYPE}
+	func_uncompress URL[@]
 }
 
 src_patch() {

@@ -35,28 +35,23 @@
 
 # **************************************************************************
 
-VERSION=8.6.0
-NAME=tk${VERSION}
-SRC_DIR_NAME=tk${VERSION}/win
-URL=http://prdownloads.sourceforge.net/tcl/tk${VERSION}-src.tar.gz
-TYPE=.tar.gz
-PRIORITY=extra
-
 P=tk
 V=8.6.0
 TYPE=".tar.gz"
 P_V=${P}${V}
 SRC_FILE="${P_V}-src${TYPE}"
 B=${P_V}
-URL=http://prdownloads.sourceforge.net/tcl/${SRC_FILE}
-PRIORITY={main, extra, prereq, runtime}
+URL=(
+	"http://prdownloads.sourceforge.net/tcl/${SRC_FILE}"
+)
+PRIORITY=extra
 
 src_download() {
-	func_download ${P_V} ${TYPE} ${URL}
+	func_download URL[@]
 }
 
 src_unpack() {
-	func_uncompress ${P_V} ${TYPE}
+	func_uncompress URL[@]
 }
 
 src_patch() {

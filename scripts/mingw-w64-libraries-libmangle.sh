@@ -38,15 +38,17 @@
 P=libmangle
 V=
 TYPE="svn"
+REV=
 P_V=${P}
 SRC_FILE=
 B=${P_V}
-URL=http://mingw-w64.svn.sourceforge.net/svnroot/mingw-w64/trunk/mingw-w64-libraries/${P}
+URL=(
+	"http://mingw-w64.svn.sourceforge.net/svnroot/mingw-w64/trunk/mingw-w64-libraries/${P}|repo:$TYPE"
+)
 PRIORITY=extra
-REV=
 
 src_download() {
-	func_download ${P_V} ${TYPE} ${URL}
+	func_download URL[@]
 }
 
 src_unpack() {

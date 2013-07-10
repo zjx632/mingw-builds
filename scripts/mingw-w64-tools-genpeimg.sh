@@ -38,15 +38,17 @@
 P=genpeimg
 V=
 TYPE="svn"
+REV=
 P_V=${P}
 SRC_FILE=
 B=${P_V}
-URL=svn://svn.code.sf.net/p/mingw-w64/code/trunk/mingw-w64-tools/${P}
+URL=(
+	"svn://svn.code.sf.net/p/mingw-w64/code/trunk/mingw-w64-tools/${P}|repo:$TYPE"
+)
 PRIORITY=extra
-REV=
 
 src_download() {
-	func_download ${P_V} ${TYPE} ${URL}
+	func_download URL[@]
 }
 
 src_unpack() {

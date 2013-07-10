@@ -38,12 +38,14 @@
 P=winpthreads
 V=
 TYPE="svn"
+REV=
 P_V=${P}
 SRC_FILE=
 B=${P_V}-x32
-URL=svn://svn.code.sf.net/p/mingw-w64/code/trunk/mingw-w64-libraries/${P}
+URL=(
+	"svn://svn.code.sf.net/p/mingw-w64/code/trunk/mingw-w64-libraries/${P}|repo:$TYPE"
+)
 PRIORITY=runtime
-REV=
 
 change_paths() {
 	[[ $ARCHITECTURE == x64 ]] && {
@@ -78,7 +80,7 @@ restore_paths() {
 }
 
 src_download() {
-	func_download ${P_V} ${TYPE} ${URL}
+	func_download URL[@]
 }
 
 src_unpack() {

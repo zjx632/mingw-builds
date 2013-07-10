@@ -41,11 +41,13 @@ TYPE="svn"
 P_V=${P}-${V}
 SRC_FILE=
 B=${P_V}
-URL=svn://gcc.gnu.org/svn/gcc/branches/gcc-4_7-branch
+URL=(
+	"svn://gcc.gnu.org/svn/gcc/branches/gcc-4_7-branch|repo:$TYPE"
+)
 PRIORITY=main
 
 src_download() {
-	func_download ${P_V} ${TYPE} ${URL}
+	func_download URL[@]
 }
 
 src_unpack() {

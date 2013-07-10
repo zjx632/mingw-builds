@@ -41,15 +41,17 @@ TYPE=".tar.gz"
 P_V=${P}-${V}
 SRC_FILE="${P_V}-src${TYPE}"
 B=${P}-${V}
-URL=https://sourceforge.net/projects/mingw/files/Other/UserContributed/regex/mingw-regex-${V}/${SRC_FILE}
+URL=(
+	"https://sourceforge.net/projects/mingw/files/Other/UserContributed/regex/mingw-regex-${V}/${SRC_FILE}"
+)
 PRIORITY=extra
 
 src_download() {
-	func_download ${P_V} ${TYPE} ${URL}
+	func_download URL[@]
 }
 
 src_unpack() {
-	func_uncompress ${P_V}-src ${TYPE}
+	func_uncompress URL[@]
 }
 
 src_patch() {

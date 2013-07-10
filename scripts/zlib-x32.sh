@@ -42,7 +42,9 @@ ZLIB_ARCH=x32
 P_V=${P}-${V}
 SRC_FILE="${P_V}${TYPE}"
 B=${ZLIB_ARCH}-${P_V}
-URL=http://sourceforge.net/projects/libpng/files/${P}/${V}/${SRC_FILE}
+URL=(
+	"http://sourceforge.net/projects/libpng/files/${P}/${V}/${SRC_FILE}"
+)
 PRIORITY=prereq
 
 change_paths() {
@@ -60,11 +62,11 @@ restore_paths() {
 }
 
 src_download() {
-	func_download ${P_V} ${TYPE} ${URL}
+	func_download URL[@]
 }
 
 src_unpack() {
-	func_uncompress ${P_V} ${TYPE}
+	func_uncompress URL[@]
 }
 
 src_patch() {

@@ -41,7 +41,9 @@ TYPE=".tar.gz"
 P_V=${P}-${V}
 SRC_FILE="${P_V}${TYPE}"
 B=${P_V}-x64-$LINK_TYPE_SUFFIX
-URL=http://ftp.gnu.org/pub/gnu/${P}/${SRC_FILE}
+URL=(
+	"http://ftp.gnu.org/pub/gnu/${P}/${SRC_FILE}"
+)
 PRIORITY=prereq
 
 change_paths() {
@@ -77,11 +79,11 @@ restore_paths() {
 }
 
 src_download() {
-	func_download ${P_V} ${TYPE} ${URL}
+	func_download URL[@]
 }
 
 src_unpack() {
-	func_uncompress ${P_V} ${TYPE}
+	func_uncompress URL[@]
 }
 
 src_patch() {

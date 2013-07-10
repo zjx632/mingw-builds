@@ -35,28 +35,23 @@
 
 # **************************************************************************
 
-VERSION=8.6.0
-NAME=tcl${VERSION}
-SRC_DIR_NAME=tcl${VERSION}/win
-URL=http://prdownloads.sourceforge.net/tcl/tcl${VERSION}-src.tar.gz
-TYPE=.tar.gz
-PRIORITY=extra
-
 P=tcl
 V=8.6.0
 TYPE=".tar.gz"
 P_V=${P}${V}
 SRC_FILE="${P_V}-src${TYPE}"
 B=${P_V}
-URL=http://prdownloads.sourceforge.net/${P}/${SRC_FILE}
+URL=(
+	"http://prdownloads.sourceforge.net/${P}/${SRC_FILE}"
+)
 PRIORITY=extra
 
 src_download() {
-	func_download ${P_V} ${TYPE} ${URL}
+	func_download URL[@]
 }
 
 src_unpack() {
-	func_uncompress ${P_V} ${TYPE}
+	func_uncompress URL[@]
 }
 
 src_patch() {

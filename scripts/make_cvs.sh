@@ -41,12 +41,14 @@ TYPE="cvs"
 P_V=${P}
 SRC_FILE=
 B=${P_V}
-URL=":pserver:anonymous:@cvs.sv.gnu.org:/sources/make"
-PRIORITY=extra
 REV=09/21/2012
+URL=(
+	":pserver:anonymous:@cvs.sv.gnu.org:/sources/make|repo:$TYPE|module:$P|rev:$REV"
+)
+PRIORITY=extra
 
 src_download() {
-	func_download ${P_V} ${TYPE} ${URL} ${REV}
+	func_download URL[@]
 }
 
 src_unpack() {

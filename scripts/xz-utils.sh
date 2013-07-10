@@ -41,15 +41,17 @@ TYPE=".tar.xz"
 P_V=${P}-${V}
 SRC_FILE="${P_V}${TYPE}"
 B=${P_V}
-URL=http://tukaani.org/${P}/${SRC_FILE}
+URL=(
+	"http://tukaani.org/${P}/${SRC_FILE}"
+)
 PRIORITY=extra
 
 src_download() {
-	func_download ${P_V} ${TYPE} ${URL}
+	func_download URL[@]
 }
 
 src_unpack() {
-	func_uncompress ${P_V} ${TYPE}
+	func_uncompress URL[@]
 }
 
 src_patch() {
