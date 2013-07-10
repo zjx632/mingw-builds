@@ -40,7 +40,7 @@ V=1.14
 TYPE=".tar.gz"
 P_V=${P}-${V}
 SRC_FILE="${P_V}${TYPE}"
-B=${P_V}-x64-$LINK_TYPE_SUFFIX
+B=x64-${P_V}-$LINK_TYPE_SUFFIX
 URL=(
 	"http://ftp.gnu.org/pub/gnu/${P}/${SRC_FILE}"
 )
@@ -55,9 +55,9 @@ change_paths() {
 			OLD_HOST=$HOST
 			OLD_BUILD=$BUILD
 			OLD_TARGET=$TARGET
-			HOST=$TVIN_HOST
-			BUILD=$TVIN_BUILD
-			TARGET=$TVIN_TARGET
+			HOST=$REVERSE_HOST
+			BUILD=$REVERSE_BUILD
+			TARGET=$REVERSE_TARGET
 		}
 	}
 }
@@ -103,7 +103,7 @@ src_configure() {
 		--build=$BUILD
 		--target=$TARGET
 		#
-		--prefix=$PREREQ_DIR/${P}-x64-$LINK_TYPE_SUFFIX
+		--prefix=$PREREQ_DIR/x64-${P}-$LINK_TYPE_SUFFIX
 		#
 		$GCC_DEPS_LINK_TYPE
 		#

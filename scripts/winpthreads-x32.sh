@@ -41,7 +41,7 @@ TYPE="svn"
 REV=
 P_V=${P}
 SRC_FILE=
-B=${P_V}-x32
+B=x32-${P_V}
 URL=(
 	"svn://svn.code.sf.net/p/mingw-w64/code/trunk/mingw-w64-libraries/${P}|repo:$TYPE"
 )
@@ -56,9 +56,9 @@ change_paths() {
 			OLD_HOST=$HOST
 			OLD_BUILD=$BUILD
 			OLD_TARGET=$TARGET
-			HOST=$TVIN_HOST
-			BUILD=$TVIN_BUILD
-			TARGET=$TVIN_TARGET
+			HOST=$REVERSE_HOST
+			BUILD=$REVERSE_BUILD
+			TARGET=$REVERSE_TARGET
 		}
 	}
 }
@@ -104,7 +104,7 @@ src_configure() {
 		--build=$BUILD
 		--target=$TARGET
 		#
-		--prefix=$RUNTIME_DIR/${P}-x32
+		--prefix=$RUNTIME_DIR/x32-${P}
 		#
 		$LINK_TYPE_BOTH
 		#
