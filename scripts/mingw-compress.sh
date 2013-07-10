@@ -39,7 +39,7 @@
 	ARCHIVE_NAME=$( \
 		func_create_mingw_archive_name \
 			$ARCHIVES_DIR \
-			$UNPACK_DIR \
+			$SRCS_DIR \
 			$GCC_NAME \
 			$ARCHITECTURE \
 			$EXCEPTIONS_MODEL \

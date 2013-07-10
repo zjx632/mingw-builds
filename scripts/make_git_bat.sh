@@ -66,7 +66,7 @@ src_patch() {
 src_configure() {
 	if ! [ -f $CURR_BUILD_DIR/${P_V}.marker ]
 	then
-		cp -rf ${UNPACK_DIR}/${P_V} ${CURR_BUILD_DIR}/
+		cp -rf ${SRCS_DIR}/${P_V} ${CURR_BUILD_DIR}/
 		touch $CURR_BUILD_DIR/${P_V}.marker
 	fi
 }

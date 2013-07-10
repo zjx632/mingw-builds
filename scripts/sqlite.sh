@@ -64,7 +64,7 @@ src_patch() {
 		"perl -pi -e 's#archive_cmds_need_lc=yes#archive_cmds_need_lc=no#g' configure"
 	)
 	local _allcommands="${_commands[@]}"
-	func_execute ${UNPACK_DIR}/${P_V} "pre-configure" "$_allcommands"
+	func_execute ${SRCS_DIR}/${P_V} "pre-configure" "$_allcommands"
 }
 
 src_configure() {

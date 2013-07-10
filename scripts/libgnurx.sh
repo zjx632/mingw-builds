@@ -62,8 +62,8 @@ src_patch() {
 		_patches[@]
 
 	local _commands=(
-		"cp -rf $PATCHES_DIR/libgnurx/mingw32-libgnurx-configure.ac $UNPACK_DIR/${P}-${V}/configure.ac"
-		"cp -rf $PATCHES_DIR/libgnurx/mingw32-libgnurx-Makefile.am $UNPACK_DIR/${P}-${V}/Makefile.am"
+		"cp -rf $PATCHES_DIR/libgnurx/mingw32-libgnurx-configure.ac $SRCS_DIR/${P}-${V}/configure.ac"
+		"cp -rf $PATCHES_DIR/libgnurx/mingw32-libgnurx-Makefile.am $SRCS_DIR/${P}-${V}/Makefile.am"
 		"touch AUTHORS"
 		"touch NEWS"
 		"libtoolize --copy"
@@ -72,7 +72,7 @@ src_patch() {
 		"automake --add-missing"
 	)
 	local _allcommands="${_commands[@]}"
-	func_execute ${UNPACK_DIR}/${P}-${V} "Autoreconf" "$_allcommands"
+	func_execute ${SRCS_DIR}/${P}-${V} "Autoreconf" "$_allcommands"
 }
 
 src_configure() {

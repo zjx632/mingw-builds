@@ -53,7 +53,7 @@
 		cp -f $BUILDS_DIR/${GCC_NAME}/${TARGET}/libobjc/.libs/libobjc.dll.a $PREFIX/lib/gcc/$TARGET/$_gcc_version/ \
 			|| die "Cannot copy libobjc.dll.a to $PREFIX/lib/gcc/$TARGET/$_gcc_version"
 		# objc headers
-		cp -rf ${UNPACK_DIR}/${GCC_NAME}/libobjc/objc $PREFIX/lib/gcc/$TARGET/$_gcc_version/include \
+		cp -rf ${SRCS_DIR}/${GCC_NAME}/libobjc/objc $PREFIX/lib/gcc/$TARGET/$_gcc_version/include \
 			|| die "Cannot copy objc headers to $PREFIX/lib/gcc/$TARGET/$_gcc_version/include"
 	}
 

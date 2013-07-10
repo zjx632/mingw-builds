@@ -57,8 +57,8 @@
 			echo "name: $_pack_name" >> $VERSION_FILE
 			echo "url: $_url" >> $VERSION_FILE
 			
-			cd $UNPACK_DIR/$_pack_name
-			[[ $? != 0 ]] && { echo "error in $UNPACK_DIR/$_pack_name"; exit 1; }
+			cd $SRCS_DIR/$_pack_name
+			[[ $? != 0 ]] && { echo "error in $SRCS_DIR/$_pack_name"; exit 1; }
 
 			case $_pack_type in
 				cvs) echo "revision: $( grep 'REV=' $PORTS_DIR/${sub}.sh | sed 's|REV=||' )" >> $VERSION_FILE ;;

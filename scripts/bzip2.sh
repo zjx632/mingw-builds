@@ -68,7 +68,7 @@ src_patch() {
 		"./autogen.sh"
 	)
 	local _allcommands="${_commands[@]}"
-	func_execute ${UNPACK_DIR}/${P_V} "Autogen" "$_allcommands"
+	func_execute ${SRCS_DIR}/${P_V} "Autogen" "$_allcommands"
 }
 
 src_configure() {
