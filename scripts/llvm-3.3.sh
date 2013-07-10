@@ -41,24 +41,20 @@ TYPE=".tar.gz"
 P_V=${P}-${V}.src
 SRC_FILE="${P_V}${TYPE}"
 B=${P_V}
-URL=gggggg
-URL_CLANG=gfdgrdgd
-URL_RUNTIME=grggtr
-URL_TESTSUITE=ffrfre
+URL=(
+	"http://llvm.org/releases/${VERSION}/llvm-3.3.src.tar.gz"
+	"http://llvm.org/releases/${VERSION}/cfe-3.3.src.tar.gz|dir:$NAME/tools"
+	"http://llvm.org/releases/${VERSION}/compiler-rt-3.3.src.tar.gz|dir:$NAME/projects"
+	"http://llvm.org/releases/${VERSION}/test-suite-3.3.src.tar.gz|dir:$NAME/projects"
+)
 PRIORITY=main
 
 src_download() {
-	func_download ${P_V} ${TYPE} ${URL}
-	func_download cfe-${V}.src ${TYPE} ${URL_CLANG}
-	func_download compiler-rt-${V}.src ${TYPE} ${URL_RUNTIME}
-	func_download test-suite-${V}.src ${TYPE} ${URL_TESTSUITE}
+	func_download URL[@]
 }
 
 src_unpack() {
-	func_uncompress ${P_V} ${TYPE}
-	func_uncompress cfe-${V}.src ${TYPE} ${UNPACK_DIR}/${P_V}/tools
-	func_uncompress compiler-rt-${V}.src ${TYPE} ${UNPACK_DIR}/${P_V}/projects
-	func_uncompress test-suite-${V}.src ${TYPE} ${UNPACK_DIR}/${P_V}/projects
+	func_uncompress URL[@]
 	
 	if ! [ -f ${MARKERS_DIR}/${P_V}-post.marker ]
 	then

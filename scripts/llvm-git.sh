@@ -41,21 +41,20 @@ TYPE="git"
 P_V=${P}-${V}
 SRC_FILE=
 B=${P_V}
-URL=http://llvm.org/git/llvm.git
-URL_CLANG=http://llvm.org/git/clang.git
-URL_RUNTIME=http://llvm.org/git/compiler-rt.git
-URL_TESTSUITE=http://llvm.org/git/test-suite.git
+URL=(
+	"http://llvm.org/git/llvm.git|repo:$TYPE|module:${P_V}"
+	"http://llvm.org/git/clang.git|repo:$TYPE|dir:${P_V}/tools|module:clang"
+	"http://llvm.org/git/compiler-rt.git|repo:$TYPE|dir:${P_V}/projects|module:compiler-rt"
+	"http://llvm.org/git/test-suite.git|repo:$TYPE|dir:${P_V}/projects|module:test-suite"
+)
 PRIORITY=main
 
 src_download() {
-	func_download ${P_V} ${TYPE} ${URL}
-	func_download ${P_V}/tools/clang ${TYPE} ${URL_CLANG}
-	func_download ${P_V}/projects/compiler-rt ${TYPE} ${URL_RUNTIME}
-	func_download ${P_V}/projects/test-suite ${TYPE} ${URL_TESTSUITE}
+	func_download URL[@]
 }
 
 src_unpack() {
-	echo "Doesn't need to unpack"
+	echo "--> Doesn't need to unpack."
 }
 
 src_patch() {
