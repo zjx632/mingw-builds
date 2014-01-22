@@ -911,6 +911,7 @@ function func_map_gcc_name_to_gcc_version {
 
 	case $1 in
 		gcc-4.8.1-tdm)		echo "4.8.1-dw2" ;;
+        gcc-4.8.2-tdm)		echo "4.8.2" ;;
 		gcc-?.?.?)			echo "${1/gcc-/}" ;;
 		gcc-4_6-branch)		echo "4.6.5" ;;
 		gcc-4_7-branch)		echo "4.7.4" ;;
