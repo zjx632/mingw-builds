@@ -1,0 +1,652 @@
+# HG changeset patch
+# Parent 74406f0c8f5091109456edbbec56500e0bd32e52
+
+diff -r 74406f0c8f50 libgcc/Makefile.in
+--- a/libgcc/Makefile.in	Sun Sep 29 07:45:58 2013 -0600
++++ b/libgcc/Makefile.in	Wed Oct 02 18:29:15 2013 -0600
+@@ -833,6 +833,11 @@
+ 
+ endif
+ 
++libgcc-objects += shmem-win32.o
++shmem-win32.o: $(srcdir)/../libgcc/config/i386/shmem-win32.c
++	$(filter-out -fexceptions,$(gcc_compile)) \
++	 -fno-exceptions -c $(srcdir)/../libgcc/config/i386/shmem-win32.c
++
+ # Build LIBUNWIND. Use -fno-exceptions so that the unwind library does
+ # not generate calls to __gcc_personality_v0.
+ 
+diff -r 74406f0c8f50 libgcc/config/i386/shmem-win32.c
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/libgcc/config/i386/shmem-win32.c	Wed Oct 02 18:29:15 2013 -0600
+@@ -0,0 +1,109 @@
++/* -- shmem-win32.c --
++ *
++ * See gcc/shmem.h for a description of __SHMEM.
++ *
++ * This is the win32 implementation of __SHMEM, based in part on a mechanism
++ * originally developed by Thomas Pfaff and Adriano dos Santos Fernandes,
++ * reimplemented by JohnE as of 2010.
++ *
++ * This code is released into the public domain without warranty; it may be
++ * freely used and redistributed.
++ */
++
++
++#include "shmem.h"
++
++#define WIN32_LEAN_AND_MEAN
++#include <windows.h>
++#include <malloc.h>
++
++
++static const char* shmem_version_prefix = "gcc-shmem-tdm2";
++
++
++static void __w32sp_trap(void)
++{
++	asm("int $0x3");
++}
++
++
++static void* get_ptr_from_atom(ATOM atom, char* name_buf, int name_buf_len, int ptr_offset)
++{
++	int ptr_len = sizeof(void*) * 8;
++	if ((name_buf_len - ptr_offset - 1) < ptr_len)
++		__w32sp_trap();
++	if (!GetAtomNameA(atom, name_buf, name_buf_len))
++		__w32sp_trap();
++	size_t ptr = 0;
++	int i = 0;
++	for (; i < ptr_len; ++i)
++	{
++		if (name_buf[ptr_offset + i] == 'A')
++			ptr |= (1 << (ptr_len - i));
++	}
++	return (void*)ptr;
++}
++
++
++void* __shmem_grab(const char* name, int size, void (*initfunc)(void*))
++{
++	int prefix_len = strlen(shmem_version_prefix);
++	int name_len = strlen(name);
++	int ptr_len = sizeof(void*) * 8;
++
++	char full_atom_name[prefix_len + 1 + name_len + 1 + ptr_len + 2];
++
++	memcpy(full_atom_name, shmem_version_prefix, prefix_len);
++	full_atom_name[prefix_len] = '-';
++	memcpy(full_atom_name + prefix_len + 1, name, name_len);
++	memset(full_atom_name + prefix_len + 1 + name_len + 1, 'a', ptr_len);
++	full_atom_name[prefix_len + 1 + name_len + 1 + ptr_len] = 0;
++
++	full_atom_name[prefix_len + 1 + name_len] = 0;
++	HANDLE hmutex = CreateMutexA(0, FALSE, full_atom_name);
++	full_atom_name[prefix_len + 1 + name_len] = '-';
++	if (WaitForSingleObject(hmutex, INFINITE) != WAIT_OBJECT_0)
++		__w32sp_trap();
++
++	ATOM atom = FindAtomA(full_atom_name);
++
++	void* ret = 0;
++
++	if (atom)
++	{
++		ret = get_ptr_from_atom(atom, full_atom_name,
++		 prefix_len + 1 + name_len + 1 + ptr_len + 1, prefix_len + 1 + name_len + 1);
++	}
++	else
++	{
++		void* shared_mem = malloc(size);
++
++		int i = 0;
++		for (; i < ptr_len; ++i)
++		{
++			if ((((size_t)shared_mem) >> (ptr_len - i)) & 1)
++				full_atom_name[prefix_len + 1 + name_len + 1 + i] = 'A';
++		}
++
++		atom = AddAtomA(full_atom_name);
++		if (!atom)
++			__w32sp_trap();
++
++		ret = get_ptr_from_atom(atom, full_atom_name,
++		 prefix_len + 1 + name_len + 1 + ptr_len + 1,
++		 prefix_len + 1 + name_len + 1);
++		if (ret == shared_mem)
++		{
++			memset(ret, 0, size);
++			if (initfunc)
++				initfunc(ret);
++		}
++		else
++			free(shared_mem);
++	}
++
++	ReleaseMutex(hmutex);
++	CloseHandle(hmutex);
++
++	return ret;
++}
+diff -r 74406f0c8f50 libgcc/config/i386/t-gthr-win32
+--- a/libgcc/config/i386/t-gthr-win32	Sun Sep 29 07:45:58 2013 -0600
++++ b/libgcc/config/i386/t-gthr-win32	Wed Oct 02 18:29:15 2013 -0600
+@@ -1,2 +1,2 @@
+ # We hide calls to w32api needed for w32 thread support here:
+-LIB2ADD = $(srcdir)/config/i386/gthr-win32.c
++LIB2ADD += $(srcdir)/config/i386/gthr-win32.c
+diff -r 74406f0c8f50 libgcc/shmem.h
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/libgcc/shmem.h	Wed Oct 02 18:29:15 2013 -0600
+@@ -0,0 +1,98 @@
++/* -- shmem.h --
++ *
++ * The __SHMEM mechanism is for sharing named pointers among the instances of a
++ * static library compiled into separate modules (binaries or shared libraries)
++ * in one runtime program. It's used in libgcc and libstdc++ to be able to
++ * propagate exceptions out of shared libraries even which libgcc and libstdc++
++ * are compiled in statically.
++ *
++ * This code is released into the public domain without warranty; it may be
++ * freely used and redistributed.
++ */
++
++
++#if defined(_WIN32) || defined(_WIN64)
++#define HAVE_SHMEM_IMPL
++#endif
++
++
++#if defined(HAVE_SHMEM_IMPL) && !defined(SHARED)
++
++
++#ifdef __cplusplus
++#define __SHMEM_CLINK extern "C"
++#else
++#define __SHMEM_CLINK
++#endif
++
++
++__SHMEM_CLINK void *__shmem_grab(const char *name, int size, void (*initfunc)(void *));
++
++
++#define __SHMEM_CONCAT2(a, b) __CONCAT2_INDIR(a, b)
++#define __CONCAT2_INDIR(a, b) a ## b
++
++
++#define __SHMEM_DEFINE(type, name) \
++ type* __SHMEM_CONCAT2(__shmem_ptr_, name) = 0; \
++ type* __SHMEM_CONCAT2(__shmem_grabber_, name)() \
++ { \
++   return (type*)__shmem_grab(# name, sizeof(type), 0); \
++ }
++
++#define __SHMEM_DEFINE_INIT(type, name, initval) \
++ type* __SHMEM_CONCAT2(__shmem_ptr_, name) = 0; \
++ __SHMEM_CLINK void __SHMEM_CONCAT2(__shmem_init_, name)(void *mem) \
++ { \
++   type temp = initval; \
++   *((type*)mem) = temp; \
++ } \
++ type* __SHMEM_CONCAT2(__shmem_grabber_, name)() \
++ { \
++   return (type*)__shmem_grab(# name, sizeof(type), __SHMEM_CONCAT2(__shmem_init_, name)); \
++ }
++
++#define __SHMEM_DEFINE_ARRAY(type, name, size) \
++ type* __SHMEM_CONCAT2(__shmem_ptr_, name) = 0; \
++ type* __SHMEM_CONCAT2(__shmem_grabber_, name)() \
++ { \
++   return (type*)__shmem_grab(# name, sizeof(type) * size, 0); \
++ }
++
++
++#define __SHMEM_DECLARE(type, name) \
++ extern type* __SHMEM_CONCAT2(__shmem_ptr_, name); \
++ type* __SHMEM_CONCAT2(__shmem_grabber_, name)();
++
++
++#define __SHMEM_GET(name) \
++ (*( \
++ (__SHMEM_CONCAT2(__shmem_ptr_, name)) \
++ ? \
++ (__SHMEM_CONCAT2(__shmem_ptr_, name)) \
++ : \
++ ((__SHMEM_CONCAT2(__shmem_ptr_, name)) = __SHMEM_CONCAT2(__shmem_grabber_, name)()) \
++ ))
++
++#define __SHMEM_GET_ARRAY(name) \
++ ( \
++ (__SHMEM_CONCAT2(__shmem_ptr_, name)) \
++ ? \
++ (__SHMEM_CONCAT2(__shmem_ptr_, name)) \
++ : \
++ ((__SHMEM_CONCAT2(__shmem_ptr_, name)) = __SHMEM_CONCAT2(__shmem_grabber_, name)()) \
++ )
++
++
++#else
++
++
++#define __SHMEM_DEFINE(type, name) type name;
++#define __SHMEM_DEFINE_INIT(type, name, initval) type name = initval;
++#define __SHMEM_DEFINE_ARRAY(type, name, size) type name[size];
++#define __SHMEM_DECLARE(type, name) extern type name;
++#define __SHMEM_GET(name) name
++#define __SHMEM_GET_ARRAY(name) name
++
++
++#endif
+diff -r 74406f0c8f50 libgcc/unwind-dw2-fde.c
+--- a/libgcc/unwind-dw2-fde.c	Sun Sep 29 07:45:58 2013 -0600
++++ b/libgcc/unwind-dw2-fde.c	Wed Oct 02 18:29:15 2013 -0600
+@@ -35,21 +35,26 @@
+ #include "unwind-pe.h"
+ #include "unwind-dw2-fde.h"
+ #include "gthr.h"
++#include "shmem.h"
+ #endif
+ 
+ /* The unseen_objects list contains objects that have been registered
+    but not yet categorized in any way.  The seen_objects list has had
+    its pc_begin and count fields initialized at minimum, and is sorted
+    by decreasing value of pc_begin.  */
+-static struct object *unseen_objects;
+-static struct object *seen_objects;
++__SHMEM_DEFINE(struct object *, unseen_objects)
++#define unseen_objects __SHMEM_GET(unseen_objects)
++__SHMEM_DEFINE(struct object *, seen_objects)
++#define seen_objects __SHMEM_GET(seen_objects)
+ 
+ #ifdef __GTHREAD_MUTEX_INIT
+-static __gthread_mutex_t object_mutex = __GTHREAD_MUTEX_INIT;
++__SHMEM_DEFINE_INIT(__gthread_mutex_t, object_mutex, __GTHREAD_MUTEX_INIT)
++#define object_mutex __SHMEM_GET(object_mutex)
+ #define init_object_mutex_once()
+ #else
+ #ifdef __GTHREAD_MUTEX_INIT_FUNCTION
+-static __gthread_mutex_t object_mutex;
++__SHMEM_DEFINE(__gthread_mutex_t, object_mutex)
++#define object_mutex __SHMEM_GET(object_mutex)
+ 
+ static void
+ init_object_mutex (void)
+@@ -57,17 +62,18 @@
+   __GTHREAD_MUTEX_INIT_FUNCTION (&object_mutex);
+ }
+ 
++__SHMEM_DEFINE_INIT(__gthread_once_t, dw2_once, __GTHREAD_ONCE_INIT)
+ static void
+ init_object_mutex_once (void)
+ {
+-  static __gthread_once_t once = __GTHREAD_ONCE_INIT;
+-  __gthread_once (&once, init_object_mutex);
++  __gthread_once (&__SHMEM_GET(dw2_once), init_object_mutex);
+ }
+ #else
+ /* ???  Several targets include this file with stubbing parts of gthr.h
+    and expect no locking to be done.  */
+ #define init_object_mutex_once()
+-static __gthread_mutex_t object_mutex;
++__SHMEM_DEFINE(__gthread_mutex_t, object_mutex)
++#define object_mutex __SHMEM_GET(object_mutex)
+ #endif
+ #endif
+ 
+@@ -436,11 +442,13 @@
+    chain to determine what should be placed in the ERRATIC array, and
+    what is the linear sequence.  This overlay is safe from aliasing.  */
+ 
++__SHMEM_DEFINE(const fde *, marker)
++
+ static inline void
+ fde_split (struct object *ob, fde_compare_t fde_compare,
+ 	   struct fde_vector *linear, struct fde_vector *erratic)
+ {
+-  static const fde *marker;
++  #define marker __SHMEM_GET(marker)
+   size_t count = linear->count;
+   const fde *const *chain_end = &marker;
+   size_t i, j, k;
+@@ -475,6 +483,7 @@
+       erratic->array[k++] = linear->array[i];
+   linear->count = j;
+   erratic->count = k;
++  #undef marker
+ }
+ 
+ #define SWAP(x,y) do { const fde * tmp = x; x = y; y = tmp; } while (0)
+diff -r 74406f0c8f50 libgcc/unwind-dw2.c
+--- a/libgcc/unwind-dw2.c	Sun Sep 29 07:45:58 2013 -0600
++++ b/libgcc/unwind-dw2.c	Wed Oct 02 18:29:15 2013 -0600
+@@ -36,6 +36,7 @@
+ #include "unwind-dw2-fde.h"
+ #include "gthr.h"
+ #include "unwind-dw2.h"
++#include "shmem.h"
+ 
+ #ifdef HAVE_SYS_SDT_H
+ #include <sys/sdt.h>
+@@ -120,7 +121,8 @@
+ };
+ 
+ /* Byte size of every register managed by these routines.  */
+-static unsigned char dwarf_reg_size_table[DWARF_FRAME_REGISTERS+1];
++__SHMEM_DEFINE_ARRAY(unsigned char, dwarf_reg_size_table, DWARF_FRAME_REGISTERS+1)
++#define dwarf_reg_size_table __SHMEM_GET_ARRAY(dwarf_reg_size_table)
+ 
+ 
+ /* Read unaligned data from the instruction buffer.  */
+@@ -203,7 +205,7 @@
+ #endif
+ 
+   index = DWARF_REG_TO_UNWIND_COLUMN (index);
+-  gcc_assert (index < (int) sizeof(dwarf_reg_size_table));
++  gcc_assert (index < (int) (sizeof(unsigned char) * (DWARF_FRAME_REGISTERS + 1)));
+   size = dwarf_reg_size_table[index];
+   val = context->reg[index];
+ 
+@@ -243,7 +245,7 @@
+   void *ptr;
+ 
+   index = DWARF_REG_TO_UNWIND_COLUMN (index);
+-  gcc_assert (index < (int) sizeof(dwarf_reg_size_table));
++  gcc_assert (index < (int) (sizeof(unsigned char) * (DWARF_FRAME_REGISTERS + 1)));
+   size = dwarf_reg_size_table[index];
+ 
+   if (_Unwind_IsExtendedContext (context) && context->by_value[index])
+@@ -292,7 +294,7 @@
+ 		    _Unwind_Word val)
+ {
+   index = DWARF_REG_TO_UNWIND_COLUMN (index);
+-  gcc_assert (index < (int) sizeof(dwarf_reg_size_table));
++  gcc_assert (index < (int) (sizeof(unsigned char) * (DWARF_FRAME_REGISTERS + 1)));
+   /* Return column size may be smaller than _Unwind_Context_Reg_Val.  */
+   gcc_assert (dwarf_reg_size_table[index] <= sizeof (_Unwind_Context_Reg_Val));
+ 
+@@ -1484,6 +1486,8 @@
+   __builtin_init_dwarf_reg_size_table (dwarf_reg_size_table);
+ }
+ 
++__SHMEM_DEFINE_INIT(__gthread_once_t, once_regsizes, __GTHREAD_ONCE_INIT)
++
+ static void __attribute__((noinline))
+ uw_init_context_1 (struct _Unwind_Context *context,
+ 		   void *outer_cfa, void *outer_ra)
+@@ -1503,8 +1507,7 @@
+ 
+ #if __GTHREADS
+   {
+-    static __gthread_once_t once_regsizes = __GTHREAD_ONCE_INIT;
+-    if (__gthread_once (&once_regsizes, init_dwarf_reg_size_table) != 0
++    if (__gthread_once (&__SHMEM_GET(once_regsizes), init_dwarf_reg_size_table) != 0
+ 	&& dwarf_reg_size_table[0] == 0)
+       init_dwarf_reg_size_table ();
+   }
+diff -r 74406f0c8f50 libgcc/unwind-sjlj.c
+--- a/libgcc/unwind-sjlj.c	Sun Sep 29 07:45:58 2013 -0600
++++ b/libgcc/unwind-sjlj.c	Wed Oct 02 18:29:15 2013 -0600
+@@ -29,6 +29,7 @@
+ #include "libgcc_tm.h"
+ #include "unwind.h"
+ #include "gthr.h"
++#include "shmem.h"
+ 
+ #ifdef __USING_SJLJ_EXCEPTIONS__
+ 
+@@ -95,11 +96,14 @@
+ /* Manage the chain of registered function contexts.  */
+ 
+ /* Single threaded fallback chain.  */
+-static struct SjLj_Function_Context *fc_static;
++__SHMEM_DEFINE(struct SjLj_Function_Context *, fc_static)
++#define fc_static __SHMEM_GET(fc_static)
+ 
+ #if __GTHREADS
+-static __gthread_key_t fc_key;
+-static int use_fc_key = -1;
++__SHMEM_DEFINE(__gthread_key_t, fc_key)
++#define fc_key __SHMEM_GET(fc_key)
++__SHMEM_DEFINE_INIT(int, use_fc_key, -1)
++#define use_fc_key __SHMEM_GET(use_fc_key)
+ 
+ static void
+ fc_key_init (void)
+@@ -107,11 +111,12 @@
+   use_fc_key = __gthread_key_create (&fc_key, 0) == 0;
+ }
+ 
++__SHMEM_DEFINE_INIT(__gthread_once_t, sjlj_once, __GTHREAD_ONCE_INIT)
++
+ static void
+ fc_key_init_once (void)
+ {
+-  static __gthread_once_t once = __GTHREAD_ONCE_INIT;
+-  if (__gthread_once (&once, fc_key_init) != 0 || use_fc_key < 0)
++  if (__gthread_once (&__SHMEM_GET(sjlj_once), fc_key_init) != 0 || use_fc_key < 0)
+     use_fc_key = 0;
+ }
+ #endif
+diff -r 74406f0c8f50 libstdc++-v3/libsupc++/eh_globals.cc
+--- a/libstdc++-v3/libsupc++/eh_globals.cc	Sun Sep 29 07:45:58 2013 -0600
++++ b/libstdc++-v3/libsupc++/eh_globals.cc	Wed Oct 02 18:29:15 2013 -0600
+@@ -28,6 +28,7 @@
+ #include "cxxabi.h"
+ #include "unwind-cxx.h"
+ #include "bits/gthr.h"
++#include "shmem.h"
+ 
+ #if _GLIBCXX_HOSTED
+ using std::free;
+@@ -41,7 +42,7 @@
+ 
+ using namespace __cxxabiv1;
+ 
+-#if _GLIBCXX_HAVE_TLS
++#if _GLIBCXX_HAVE_TLS && !defined(__MINGW32__)
+ 
+ namespace
+ {
+@@ -65,7 +66,8 @@
+ #else
+ 
+ // Single-threaded fallback buffer.
+-static __cxa_eh_globals eh_globals;
++__SHMEM_DEFINE(__cxa_eh_globals, eh_globals)
++#define eh_globals __SHMEM_GET(eh_globals)
+ 
+ #if __GTHREADS
+ 
+@@ -104,9 +106,18 @@
+       __gthread_key_delete(_M_key);
+     _M_init = false;
+   }
++
++  __eh_globals_init& operator = (__eh_globals_init& c)
++  {
++    _M_key = c._M_key;
++    _M_init = c._M_init;
++    c._M_init = false;
++    return *this;
++  }
+ };
+ 
+-static __eh_globals_init init;
++__SHMEM_DEFINE_INIT(__eh_globals_init, init, __eh_globals_init())
++#define init __SHMEM_GET(init)
+ 
+ extern "C" __cxa_eh_globals*
+ __cxxabiv1::__cxa_get_globals_fast() _GLIBCXX_NOTHROW
+diff -r 74406f0c8f50 libstdc++-v3/libsupc++/eh_term_handler.cc
+--- a/libstdc++-v3/libsupc++/eh_term_handler.cc	Sun Sep 29 07:45:58 2013 -0600
++++ b/libstdc++-v3/libsupc++/eh_term_handler.cc	Wed Oct 02 18:29:15 2013 -0600
+@@ -24,6 +24,7 @@
+ 
+ #include <bits/c++config.h>
+ #include "unwind-cxx.h"
++#include "shmem.h"
+ 
+ /* We default to the talkative, informative handler in a normal hosted
+    library.  This pulls in the demangler, the dyn-string utilities, and
+@@ -34,11 +35,18 @@
+ 
+ #if _GLIBCXX_HOSTED && _GLIBCXX_VERBOSE
+ /* The current installed user handler.  */
+-std::terminate_handler __cxxabiv1::__terminate_handler =
+-	__gnu_cxx::__verbose_terminate_handler;
++namespace __cxxabiv1
++{
++	__SHMEM_DEFINE_INIT(std::terminate_handler, __terminate_handler_sh,
++		__gnu_cxx::__verbose_terminate_handler)
++}
+ #else
+ # include <cstdlib>
+ /* The current installed user handler.  */
+-std::terminate_handler __cxxabiv1::__terminate_handler = std::abort;
++namespace __cxxabiv1
++{
++	__SHMEM_DEFINE_INIT(std::terminate_handler, __terminate_handler_sh,
++		std::abort)
++}
+ #endif
+ 
+diff -r 74406f0c8f50 libstdc++-v3/libsupc++/eh_unex_handler.cc
+--- a/libstdc++-v3/libsupc++/eh_unex_handler.cc	Sun Sep 29 07:45:58 2013 -0600
++++ b/libstdc++-v3/libsupc++/eh_unex_handler.cc	Wed Oct 02 18:29:15 2013 -0600
+@@ -23,7 +23,11 @@
+ // <http://www.gnu.org/licenses/>.
+ 
+ #include "unwind-cxx.h"
++#include "shmem.h"
+ 
+ /* The current installed user handler.  */
+-std::unexpected_handler __cxxabiv1::__unexpected_handler = std::terminate;
++namespace __cxxabiv1
++{
++  __SHMEM_DEFINE_INIT(std::unexpected_handler, __unexpected_handler_sh, std::terminate)
++}
+ 
+diff -r 74406f0c8f50 libstdc++-v3/libsupc++/unwind-cxx.h
+--- a/libstdc++-v3/libsupc++/unwind-cxx.h	Sun Sep 29 07:45:58 2013 -0600
++++ b/libstdc++-v3/libsupc++/unwind-cxx.h	Wed Oct 02 18:29:15 2013 -0600
+@@ -36,6 +36,7 @@
+ #include "unwind.h"
+ #include <bits/atomic_word.h>
+ #include <cxxabi.h>
++#include "shmem.h"
+ 
+ #ifdef _GLIBCXX_HAVE_SYS_SDT_H
+ #include <sys/sdt.h>
+@@ -190,8 +191,10 @@
+   __attribute__((__noreturn__));
+ 
+ // The current installed user handlers.
+-extern std::terminate_handler __terminate_handler;
+-extern std::unexpected_handler __unexpected_handler;
++__SHMEM_DECLARE(std::terminate_handler, __terminate_handler_sh)
++#define __terminate_handler __SHMEM_GET(__terminate_handler_sh)
++__SHMEM_DECLARE(std::unexpected_handler, __unexpected_handler_sh)
++#define __unexpected_handler __SHMEM_GET(__unexpected_handler_sh)
+ 
+ // These are explicitly GNU C++ specific.
+ 
+diff -r 74406f0c8f50 libstdc++-v3/src/Makefile.in
+--- a/libstdc++-v3/src/Makefile.in	Sun Sep 29 07:45:58 2013 -0600
++++ b/libstdc++-v3/src/Makefile.in	Wed Oct 02 18:29:15 2013 -0600
+@@ -356,16 +356,68 @@
+ 
+ libstdc___la_SOURCES = $(cxx98_sources) $(cxx11_sources)
+ libstdc___la_LIBADD = \
+-	$(GLIBCXX_LIBS) \
++	$(GLIBCXX_LIBS)
++libstdc___la_LIBADD_STATIC = \
+ 	$(top_builddir)/libsupc++/libsupc++convenience.la \
+ 	$(top_builddir)/src/c++98/libc++98convenience.la \
+ 	$(top_builddir)/src/c++11/libc++11convenience.la
++libstdc___la_LIBADD_SHARED = \
++	$(top_builddir)/libsupc++/convenience-shared/libsupc++convenience.la \
++	$(top_builddir)/src/c++98/convenience-shared/libc++98convenience.la \
++	$(top_builddir)/src/c++11/convenience-shared/libc++11convenience.la
+ 
+ libstdc___la_DEPENDENCIES = \
+-	${version_dep} \
++	${version_dep}
++libstdc___la_DEPENDENCIES_STATIC = \
+ 	$(top_builddir)/libsupc++/libsupc++convenience.la \
+ 	$(top_builddir)/src/c++98/libc++98convenience.la \
+ 	$(top_builddir)/src/c++11/libc++11convenience.la
++libstdc___la_DEPENDENCIES_SHARED = \
++	$(top_builddir)/libsupc++/convenience-shared/libsupc++convenience.la \
++	$(top_builddir)/src/c++98/convenience-shared/libc++98convenience.la \
++	$(top_builddir)/src/c++11/convenience-shared/libc++11convenience.la
++
++$(top_builddir)/libsupc++/convenience-shared/libsupc++convenience.la: $(top_builddir)/libsupc++/libsupc++convenience.la
++	cp $(top_builddir)/libsupc++/libsupc++.la $(top_builddir)/libsupc++_noshared.la
++	cp $(top_builddir)/libsupc++/.libs/libsupc++.a $(top_builddir)/libsupc++_noshared.a
++	cp $(top_builddir)/libsupc++/libsupc++convenience.la $(top_builddir)/libsupc++convenience_noshared.la
++	cp $(top_builddir)/libsupc++/.libs/libsupc++convenience.a $(top_builddir)/libsupc++convenience_noshared.a
++	$(MAKE) -C $(top_builddir)/libsupc++ clean
++	$(MAKE) -C $(top_builddir)/libsupc++ CFLAGS="$(CFLAGS) -DSHARED" CXXFLAGS="$(CXXFLAGS) -DSHARED"
++	mkdir -p -- "$(top_builddir)/libsupc++/convenience-shared/.libs"
++	cp $(top_builddir)/libsupc++/libsupc++convenience.la $(top_builddir)/libsupc++/convenience-shared/
++	cp $(top_builddir)/libsupc++/libsupc++convenience.la $(top_builddir)/libsupc++/convenience-shared/.libs/
++	cp $(top_builddir)/libsupc++/.libs/libsupc++convenience.a $(top_builddir)/libsupc++/convenience-shared/.libs/
++	cp $(top_builddir)/libsupc++_noshared.la $(top_builddir)/libsupc++/libsupc++.la
++	cp $(top_builddir)/libsupc++_noshared.la $(top_builddir)/libsupc++/.libs/libsupc++.la
++	cp $(top_builddir)/libsupc++_noshared.a $(top_builddir)/libsupc++/.libs/libsupc++.a
++	cp $(top_builddir)/libsupc++convenience_noshared.la $(top_builddir)/libsupc++/libsupc++convenience.la
++	cp $(top_builddir)/libsupc++convenience_noshared.la $(top_builddir)/libsupc++/.libs/libsupc++convenience.la
++	cp $(top_builddir)/libsupc++convenience_noshared.a $(top_builddir)/libsupc++/.libs/libsupc++convenience.a
++$(top_builddir)/src/c++98/convenience-shared/libc++98convenience.la: $(top_builddir)/src/c++98/libc++98convenience.la
++	cp $(top_builddir)/src/c++98/libc++98convenience.la $(top_builddir)/libc++98convenience_noshared.la
++	cp $(top_builddir)/src/c++98/.libs/libc++98convenience.a $(top_builddir)/libc++98convenience_noshared.a
++	$(MAKE) -C $(top_builddir)/src/c++98 clean
++	$(MAKE) -C $(top_builddir)/src/c++98 CFLAGS="$(CFLAGS) -DSHARED" CXXFLAGS="$(CXXFLAGS) -DSHARED"
++	mkdir -p -- "$(top_builddir)/src/c++98/convenience-shared/.libs"
++	cp $(top_builddir)/src/c++98/libc++98convenience.la $(top_builddir)/src/c++98/convenience-shared/
++	cp $(top_builddir)/src/c++98/libc++98convenience.la $(top_builddir)/src/c++98/convenience-shared/.libs/
++	cp $(top_builddir)/src/c++98/.libs/libc++98convenience.a $(top_builddir)/src/c++98/convenience-shared/.libs/
++	cp $(top_builddir)/libc++98convenience_noshared.la $(top_builddir)/src/c++98/libc++98convenience.la
++	cp $(top_builddir)/libc++98convenience_noshared.la $(top_builddir)/src/c++98/.libs/libc++98convenience.la
++	cp $(top_builddir)/libc++98convenience_noshared.a $(top_builddir)/src/c++98/.libs/libc++98convenience.a
++$(top_builddir)/src/c++11/convenience-shared/libc++11convenience.la: $(top_builddir)/src/c++11/libc++11convenience.la
++	cp $(top_builddir)/src/c++11/libc++11convenience.la $(top_builddir)/libc++11convenience_noshared.la
++	cp $(top_builddir)/src/c++11/.libs/libc++11convenience.a $(top_builddir)/libc++11convenience_noshared.a
++	$(MAKE) -C $(top_builddir)/src/c++11 clean
++	$(MAKE) -C $(top_builddir)/src/c++11 CFLAGS="$(CFLAGS) -DSHARED" CXXFLAGS="$(CXXFLAGS) -DSHARED"
++	mkdir -p -- "$(top_builddir)/src/c++11/convenience-shared/.libs"
++	cp $(top_builddir)/src/c++11/libc++11convenience.la $(top_builddir)/src/c++11/convenience-shared/
++	cp $(top_builddir)/src/c++11/libc++11convenience.la $(top_builddir)/src/c++11/convenience-shared/.libs/
++	cp $(top_builddir)/src/c++11/.libs/libc++11convenience.a $(top_builddir)/src/c++11/convenience-shared/.libs/
++	cp $(top_builddir)/libc++11convenience_noshared.la $(top_builddir)/src/c++11/libc++11convenience.la
++	cp $(top_builddir)/libc++11convenience_noshared.la $(top_builddir)/src/c++11/.libs/libc++11convenience.la
++	cp $(top_builddir)/libc++11convenience_noshared.a $(top_builddir)/src/c++11/.libs/libc++11convenience.a
+ 
+ libstdc___la_LDFLAGS = \
+ 	-version-info $(libtool_VERSION) ${version_arg} -lm
+@@ -541,8 +593,13 @@
+ 	  echo "rm -f \"$${dir}/so_locations\""; \
+ 	  rm -f "$${dir}/so_locations"; \
+ 	done
+-libstdc++.la: $(libstdc___la_OBJECTS) $(libstdc___la_DEPENDENCIES) 
+-	$(libstdc___la_LINK) -rpath $(toolexeclibdir) $(libstdc___la_OBJECTS) $(libstdc___la_LIBADD) $(LIBS)
++libstdc++.la: $(libstdc___la_OBJECTS) $(libstdc___la_DEPENDENCIES) $(libstdc___la_DEPENDENCIES_STATIC) $(libstdc___la_DEPENDENCIES_SHARED)
++	$(LIBTOOL) --tag CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link \
++	  $(CXX) $(OPT_LDFLAGS) $(SECTION_LDFLAGS) -static $(AM_CXXFLAGS) $(LTLDFLAGS) -o $@ \
++	  $(libstdc___la_LDFLAGS) -rpath $(toolexeclibdir) $(libstdc___la_OBJECTS) $(libstdc___la_LIBADD) $(libstdc___la_LIBADD_STATIC) $(LIBS)
++	cp .libs/libstdc++.a libstdc++_noshared.a
++	$(libstdc___la_LINK) -rpath $(toolexeclibdir) $(libstdc___la_OBJECTS) $(libstdc___la_LIBADD) $(libstdc___la_LIBADD_SHARED) $(LIBS)
++	cp libstdc++_noshared.a .libs/libstdc++.a
+ 
+ mostlyclean-compile:
+ 	-rm -f *.$(OBJEXT)
+@@ -939,7 +996,7 @@
+ 	  mv Makefile Makefile.tmp; \
+ 	  sed -e 's,all-local: all-once,all-local:,' \
+ 	      -e 's,install-data-local: install-data-once,install-data-local:,' \
+-	      -e '/vpath/!s,src/c,src/debug/c,' \
++	      -e '/vpath/!s,src/c,src/debug/c,g' \
+ 	  < Makefile.tmp > Makefile ; \
+ 	  rm -f Makefile.tmp ; \
+ 	  $(MAKE) CXXFLAGS='$(DEBUG_FLAGS)' \

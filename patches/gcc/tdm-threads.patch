@@ -1,0 +1,75 @@
+# HG changeset patch
+# Parent e65b3ea63c66ee58df6cf721db1b422da7c3d630
+
+diff -r e65b3ea63c66 gcc/config/i386/mingw-w64.h
+--- a/gcc/config/i386/mingw-w64.h	Mon Sep 23 10:33:17 2013 -0600
++++ b/gcc/config/i386/mingw-w64.h	Sun Sep 29 07:45:07 2013 -0600
+@@ -77,7 +77,7 @@
+ #endif
+ 
+ #undef LINK_SPEC
+-#define LINK_SPEC SUB_LINK_SPEC " %{mwindows:--subsystem windows} \
++#define LINK_SPEC SUB_LINK_SPEC " --exclude-libs=libpthread.a %{mwindows:--subsystem windows} \
+   %{mconsole:--subsystem console} \
+   %{shared: %{mdll: %eshared and mdll are not compatible}} \
+   %{shared: --shared} %{mdll:--dll} \
+diff -r e65b3ea63c66 gcc/config/i386/mingw32.h
+--- a/gcc/config/i386/mingw32.h	Mon Sep 23 10:33:17 2013 -0600
++++ b/gcc/config/i386/mingw32.h	Sun Sep 29 07:45:07 2013 -0600
+@@ -110,7 +110,7 @@
+ #define SUBTARGET_EXTRA_SPECS						\
+   { "shared_libgcc_undefs", SHARED_LIBGCC_UNDEFS_SPEC }
+ 
+-#define LINK_SPEC "%{mwindows:--subsystem windows} \
++#define LINK_SPEC "--exclude-libs=libpthread.a %{mwindows:--subsystem windows} \
+   %{mconsole:--subsystem console} \
+   %{shared: %{mdll: %eshared and mdll are not compatible}} \
+   %{shared: --shared} %{mdll:--dll} \
+diff -r e65b3ea63c66 libgcc/gthr-posix.h
+--- a/libgcc/gthr-posix.h	Mon Sep 23 10:33:17 2013 -0600
++++ b/libgcc/gthr-posix.h	Sun Sep 29 07:45:07 2013 -0600
+@@ -82,7 +82,7 @@
+ # define __GTHREAD_COND_INIT_FUNCTION __gthread_cond_init_function
+ #endif
+ 
+-#if SUPPORTS_WEAK && GTHREAD_USE_WEAK
++#if SUPPORTS_WEAK && GTHREAD_USE_WEAK && !defined(__MINGW32__)
+ # ifndef __gthrw_pragma
+ #  define __gthrw_pragma(pragma)
+ # endif
+diff -r e65b3ea63c66 libgfortran/intrinsics/system_clock.c
+--- a/libgfortran/intrinsics/system_clock.c	Mon Sep 23 10:33:17 2013 -0600
++++ b/libgfortran/intrinsics/system_clock.c	Sun Sep 29 07:45:07 2013 -0600
+@@ -28,6 +28,11 @@
+ 
+ #include "time_1.h"
+ 
++#ifdef __MINGW32__
++#include <pthread.h>
++#include <pthread_time.h>
++#endif
++
+ 
+ /* POSIX states that CLOCK_REALTIME must be present if clock_gettime
+    is available, others are optional.  */
+diff -r e65b3ea63c66 libstdc++-v3/configure
+--- a/libstdc++-v3/configure	Mon Sep 23 10:33:17 2013 -0600
++++ b/libstdc++-v3/configure	Sun Sep 29 07:45:07 2013 -0600
+@@ -19921,7 +19921,7 @@
+ int
+ main ()
+ {
+-sleep(1);
++/* sleep(1); */
+                       usleep(100);
+   ;
+   return 0;
+@@ -19942,7 +19942,7 @@
+ $as_echo "$ac_has_usleep" >&6; }
+   fi
+ 
+-  if test x"$ac_has_nanosleep$ac_has_sleep" = x"nono"; then
++  if test x"$ac_has_sleep" = x"no"; then
+       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Sleep" >&5
+ $as_echo_n "checking for Sleep... " >&6; }
+       cat confdefs.h - <<_ACEOF >conftest.$ac_ext

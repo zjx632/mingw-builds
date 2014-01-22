@@ -1,0 +1,9 @@
+# HG changeset patch
+# Parent 4629cba537a6dc34e8350c75ac6e6d8dca6b2a3f
+
+diff -r 4629cba537a6 gcc/BASE-VER
+--- a/gcc/BASE-VER	Sun Mar 24 21:12:50 2013 -0600
++++ b/gcc/BASE-VER	Sun Mar 24 22:27:43 2013 -0600
+@@ -1,1 +1,1 @@
+-4.8.1
++4.8.1-dw2

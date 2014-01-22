@@ -427,7 +427,6 @@ function func_download {
 					--tries=$_WGET_TRIES \
 					--timeout=$_WGET_TIMEOUT \
 					--wait=$_WGET_WAIT \
-					--no-check-certificate \
 					$_url -O $_lib_name > $_log_name 2>&1
 				_result=$?
 			}
@@ -911,11 +910,12 @@ function func_map_gcc_name_to_gcc_version {
 	# $1 - gcc name
 
 	case $1 in
+		gcc-4.8.1-tdm)		echo "4.8.1-dw2" ;;
 		gcc-?.?.?)			echo "${1/gcc-/}" ;;
-		gcc-4_6-branch)	echo "4.6.5" ;;
-		gcc-4_7-branch)	echo "4.7.4" ;;
-		gcc-4_8-branch)	echo "4.8.3" ;;
-		gcc-4_9-branch)	echo "4.9.1" ;;
+		gcc-4_6-branch)		echo "4.6.5" ;;
+		gcc-4_7-branch)		echo "4.7.4" ;;
+		gcc-4_8-branch)		echo "4.8.3" ;;
+		gcc-4_9-branch)		echo "4.9.1" ;;
 		gcc-trunk)			echo "4.9.0" ;;
 		*) die "gcc name error: $1. terminate." ;;
 	esac
