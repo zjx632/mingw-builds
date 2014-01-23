@@ -142,4 +142,7 @@ PKG_INSTALL_FLAGS=(
 	$( [[ $STRIP_ON_INSTALL == yes ]] && echo install-strip || echo install )
 )
 
+PKG_EXECUTE_AFTER_INSTALL=(
+	"mv -f $PREFIX/$TARGET/lib/libpthread.dll.a $PREFIX/$TARGET/lib/libpthread_s.dll.a"
+)
 # **************************************************************************
