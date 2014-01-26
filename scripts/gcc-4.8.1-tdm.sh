@@ -147,6 +147,7 @@ PKG_INSTALL_FLAGS=(
 
 PKG_EXECUTE_AFTER_INSTALL=(
 	"mv -f $PREFIX/$TARGET/lib/libpthread.dll.a $PREFIX/$TARGET/lib/libpthread_s.dll.a"
+    "mv -f $PREFIX/$TARGET/lib/libwinpthread.dll.a $PREFIX/$TARGET/lib/libwinpthread_s.dll.a"
 )
 
 # **************************************************************************
