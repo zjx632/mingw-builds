@@ -45,7 +45,10 @@ PKG_PRIORITY=runtime
 
 #
 
-PKG_PATCHES=()
+PKG_PATCHES=(
+	#mingw-w64/winpthread-${RUNTIME_VERSION}-fullstatic.patch
+	#mingw-w64/winpthread-${RUNTIME_VERSION}-shmem.patch
+)
 
 #
 

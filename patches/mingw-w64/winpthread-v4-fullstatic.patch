@@ -1,0 +1,44 @@
+# HG changeset patch
+# User flythink
+# Date 1390195270 -28800
+#      Mon Jan 20 13:21:10 2014 +0800
+# Node ID 864eac5c8a2f57c2acf6c1dc87ff92b46b4962f5
+# Parent  79a22e20d3044631f5df65aac78f5d823970a2d3
+fullstatic
+
+diff -r 79a22e20d304 -r 864eac5c8a2f include/pthread.h
+--- a/include/pthread.h	Mon Jan 20 13:15:33 2014 +0800
++++ b/include/pthread.h	Mon Jan 20 13:21:10 2014 +0800
+@@ -82,7 +82,7 @@
+ /* MSB 8-bit major version, 8-bit minor version, 16-bit patch level.  */
+ #define __WINPTHREADS_VERSION 0x00050000
+ 
+-#if defined DLL_EXPORT
++#if defined DLL_EXPORT && !defined WINPTHREAD_STATIC
+ #ifdef IN_WINPTHREAD
+ #define WINPTHREAD_API __declspec(dllexport)
+ #else
+diff -r 79a22e20d304 -r 864eac5c8a2f include/sched.h
+--- a/include/sched.h	Mon Jan 20 13:15:33 2014 +0800
++++ b/include/sched.h	Mon Jan 20 13:21:10 2014 +0800
+@@ -49,7 +49,7 @@
+ extern "C" {
+ #endif
+ 
+-#if defined DLL_EXPORT && !defined (WINPTHREAD_EXPORT_ALL_DEBUG)
++#if defined DLL_EXPORT && !defined (WINPTHREAD_EXPORT_ALL_DEBUG) && !defined WINPTHREAD_STATIC
+ #ifdef IN_WINPTHREAD
+ #define WINPTHREAD_SCHED_API __declspec(dllexport)
+ #else
+diff -r 79a22e20d304 -r 864eac5c8a2f include/semaphore.h
+--- a/include/semaphore.h	Mon Jan 20 13:15:33 2014 +0800
++++ b/include/semaphore.h	Mon Jan 20 13:21:10 2014 +0800
+@@ -27,7 +27,7 @@
+ extern "C" {
+ #endif
+ 
+-#if defined DLL_EXPORT && !defined (WINPTHREAD_EXPORT_ALL_DEBUG)
++#if defined DLL_EXPORT && !defined (WINPTHREAD_EXPORT_ALL_DEBUG) && !defined WINPTHREAD_STATIC
+ #ifdef IN_WINPTHREAD
+ #define WINPTHREAD_SEMA_API __declspec(dllexport)
+ #else

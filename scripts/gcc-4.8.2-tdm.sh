@@ -59,6 +59,13 @@ PKG_PATCHES=(
 	gcc/tdm-libgcceh.patch
 	gcc/tdm-libgomp.patch
 	gcc/tdm-lfs.patch
+	gcc/gcc-4.8-filename-output.patch
+	gcc/gcc-4.8-lambda-ICE.patch
+	gcc/gcc-4.8-libatomic-cygwin.patch
+	gcc/gcc-4.8.2-build-more-gnattools.mingw.patch
+	gcc/gcc-4.8.2-dont-escape-arguments-that-dont-need-it-in-pex-win32.c.patch
+	gcc/gcc-4.8.2-fix-for-windows-not-minding-non-existant-parent-dirs.patch
+	gcc/gcc-4.8.2-windows-lrealpath-no-force-lowercase-nor-backslash.patch
 )
 
 #
@@ -82,6 +89,7 @@ PKG_CONFIGURE_FLAGS=(
 	--enable-libstdcxx-time=yes
 	--enable-threads=$THREADS_MODEL
 	--enable-libgomp
+	--enable-libatomic
 	--enable-lto
 	--enable-graphite
 	--enable-checking=release
